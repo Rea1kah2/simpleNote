@@ -14,7 +14,7 @@ class CloudPreferences(context: Context) {
     }
 
     var cloudUrl: String
-        get() = prefs.getString(KEY_CLOUD_URL, "") ?: ""
+        get() = prefs.getString(KEY_CLOUD_URL, "https://simple-note-umber.vercel.app") ?: "https://simple-note-umber.vercel.app"
         set(value) = prefs.edit().putString(KEY_CLOUD_URL, value.trim()).apply()
 
     var isAutoSyncEnabled: Boolean
