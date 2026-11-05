@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+GRADLE_BIN="/Users/admin/.gradle/wrapper/dists/gradle-8.11.1-all/2qik7nd48slq1ooc2496ixf4i/gradle-8.11.1/bin/gradle"
+if [ ! -f "$GRADLE_BIN" ]; then
+    GRADLE_BIN=$(which gradle 2>/dev/null)
+fi
+exec "$GRADLE_BIN" "$@"

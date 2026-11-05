@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.SimpleNote" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#C1440E</item>
+        <item name="android:navigationBarColor">#F8F5F0</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>
