@@ -87,8 +87,18 @@ const SEED_DATA = {
 let memoryStore = { ...SEED_DATA };
 
 function getKvCredentials() {
-  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  const kvUrl =
+    process.env.KV_REST_API_URL ||
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.STORAGE_KV_REST_API_URL ||
+    process.env.VERCEL_KV_REST_API_URL;
+
+  const kvToken =
+    process.env.KV_REST_API_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.STORAGE_KV_REST_API_TOKEN ||
+    process.env.VERCEL_KV_REST_API_TOKEN;
+
   return { kvUrl, kvToken };
 }
 
@@ -182,12 +192,16 @@ module.exports = async function handler(req, res) {
 
   // Ping / Health Check mode
   if (req.query && req.query.ping === "true") {
+    const detectedKeys = Object.keys(process.env).filter(
+      (k) => k.includes("KV") || k.includes("REDIS") || k.includes("UPSTASH")
+    );
     return res.status(200).json({
       status: "ok",
       appName: "SimpleNote Backend",
       timestamp: new Date().toISOString(),
       storage: storageBackend,
-      kvConnected: !!kvUrl
+      kvConnected: !!(kvUrl),
+      detectedKeys: detectedKeys
     });
   }
 

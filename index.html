@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>SimpleNote</title>
+  
+  <!-- PWA & Apple Web App Meta -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#C1440E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SimpleNote">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  
+  <link rel="stylesheet" href="style.css?v=9">
+</head>
+<body>
+  <!-- Top Floating Toast Notification Container (Dynamic Island style) -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <div id="app" class="app-container">
+    
+    <!-- Top Header Bar -->
+    <header class="app-header">
+      <div class="header-content">
+        <h1 id="screen-title" class="screen-title">Hari Ini</h1>
+      </div>
+    </header>
+
+    <!-- Main View Content -->
+    <main id="main-content" class="main-content">
+      
+      <!-- TAB 1: TODAY VIEW -->
+      <section id="tab-today" class="tab-pane active">
+        <!-- Direct Canvas Hero Header (52pt) -->
+        <div class="canvas-hero">
+          <div class="hero-date-line">
+            <span id="hero-day-name" class="hero-tag">HARI INI</span>
+            <span class="hero-dot">•</span>
+            <span id="hero-full-date" class="hero-date">Memuat...</span>
+          </div>
+          
+          <div id="today-total-display" class="hero-amount">Rp 0</div>
+          
+          <!-- Terracotta Signature Bar -->
+          <div class="hero-signature-bar"></div>
+          
+          <div class="hero-status-line">
+            <span class="status-indicator-dot"></span>
+            <span id="today-status-text">Dompetmu masih tenang hari ini</span>
+          </div>
+        </div>
+
+        <!-- Activity Section -->
+        <div class="section-container">
+          <div class="section-header">
+            <span class="section-title">Aktivitas Hari Ini</span>
+            <span id="today-count-badge" class="section-subtitle"></span>
+          </div>
+
+          <div id="today-expenses-list" class="expense-list">
+            <!-- Dynamic items or empty state -->
+          </div>
+        </div>
+
+        <!-- Floating Action Button (FAB) -->
+        <button id="btn-open-add" class="fab-btn" aria-label="Catat Pengeluaran">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Catat</span>
+        </button>
+      </section>
+
+      <!-- TAB 2: HISTORY VIEW -->
+      <section id="tab-history" class="tab-pane">
+        <!-- Search Bar -->
+        <div class="search-bar-container">
+          <div class="search-box">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="history-search-input" placeholder="Cari catatan atau kategori..." autocomplete="off">
+            <button id="btn-clear-search" class="clear-search-btn" style="display:none;">✕</button>
+          </div>
+        </div>
+
+        <!-- Month Selector & Calendar -->
+        <div id="calendar-wrapper" class="calendar-card">
+          <div class="calendar-nav">
+            <button id="btn-prev-month" class="nav-arrow-btn">‹</button>
+            <span id="calendar-month-label" class="calendar-month-text">November 2026</span>
+            <button id="btn-next-month" class="nav-arrow-btn">›</button>
+          </div>
+          <div class="weekdays-row">
+            <span>Min</span><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span>
+          </div>
+          <div id="calendar-days-grid" class="days-grid"></div>
+        </div>
+
+        <!-- Horizontal Category Filter Chips -->
+        <div class="category-filter-scroll">
+          <div id="history-category-filters" class="chips-row"></div>
+        </div>
+
+        <!-- Summary Filter Pill -->
+        <div class="history-summary-bar">
+          <span id="history-filter-status" class="filter-status-text">Semua Pengeluaran Bulan Ini</span>
+          <span id="history-filtered-total" class="filter-total-text">Total: Rp 0</span>
+        </div>
+
+        <!-- History Grouped List -->
+        <div id="history-grouped-list" class="history-groups-container"></div>
+      </section>
+
+      <!-- TAB 3: STATS VIEW -->
+      <section id="tab-stats" class="tab-pane">
+        <!-- Month Navigator -->
+        <div class="month-pill-selector">
+          <button id="btn-stats-prev" class="nav-arrow-btn">‹</button>
+          <span id="stats-month-label" class="calendar-month-text">November 2026</span>
+          <button id="btn-stats-next" class="nav-arrow-btn">›</button>
+        </div>
+
+        <!-- Monthly Summary Card -->
+        <div class="stats-summary-card">
+          <div class="stats-micro-label">TOTAL PENGELUARAN BULAN INI</div>
+          <div id="stats-monthly-total" class="stats-big-number">Rp 0</div>
+          <div id="stats-average-daily" class="stats-subtext">Rata-rata: Rp 0/hari</div>
+        </div>
+
+        <!-- Donut Chart & Breakdown -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span class="section-title">Kategori Pengeluaran</span>
+          </div>
+          
+          <div class="donut-chart-container">
+            <svg id="donut-svg" viewBox="0 0 200 200" width="180" height="180"></svg>
+            <div class="donut-center-label">
+              <span class="donut-micro">TOTAL</span>
+              <span id="donut-center-amount" class="donut-total">Rp 0</span>
+            </div>
+          </div>
+
+          <div id="stats-category-list" class="category-breakdown-list"></div>
+        </div>
+
+        <!-- Trend Bar Chart (Weekly & Daily Segmented) -->
+        <div class="chart-card">
+          <div class="chart-header chart-header-split">
+            <span class="section-title">Tren Pengeluaran</span>
+            <div class="trend-segmented-control">
+              <button id="btn-trend-weekly" class="trend-segment-btn active" type="button">Mingguan</button>
+              <button id="btn-trend-daily" class="trend-segment-btn" type="button">Harian</button>
+            </div>
+          </div>
+
+          <!-- Dynamic Interactive Tooltip -->
+          <div id="trend-tooltip-card" class="trend-tooltip-card">
+            <span id="trend-tooltip-date" class="trend-tooltip-date">Ketuk bar untuk rincian</span>
+            <span id="trend-tooltip-amount" class="trend-tooltip-amount"></span>
+          </div>
+
+          <div id="trend-bars-wrapper" class="trend-bars-wrapper">
+            <div id="daily-bar-chart" class="bars-container mode-weekly"></div>
+          </div>
+
+          <!-- Selected Period Transactions Breakdown -->
+          <div id="trend-breakdown-container" class="trend-breakdown-container" style="display: none;">
+            <div class="trend-breakdown-header">
+              <span id="trend-breakdown-title" class="trend-breakdown-title">Rincian Transaksi</span>
+              <span id="trend-breakdown-badge" class="trend-breakdown-badge">0 Transaksi</span>
+            </div>
+            <div id="trend-breakdown-list" class="trend-breakdown-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: SETTINGS VIEW -->
+      <section id="tab-settings" class="tab-pane">
+        <!-- Category Management Section -->
+        <div class="settings-group">
+          <div class="settings-group-header">KUSTOMISASI</div>
+          <div class="settings-card">
+            <div class="settings-row" id="btn-open-cat-manager">
+              <div class="row-left">
+                <span class="settings-svg-badge">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                  </svg>
+                </span>
+                <span class="row-title">Kelola Kategori</span>
+              </div>
+              <span class="row-arrow">›</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Format Section -->
+        <div class="settings-group">
+          <div class="settings-group-header">FORMAT & SATUAN</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <div class="row-left">
+                <span class="settings-svg-badge">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                  </svg>
+                </span>
+                <span class="row-title">Mata Uang</span>
+              </div>
+              <span class="row-value">IDR (Rupiah)</span>
+            </div>
+            <div class="settings-divider"></div>
+            <div class="settings-row">
+              <span class="row-title-sub">Contoh Format</span>
+              <span class="row-value-bold">Rp 75.000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Privacy Section -->
+        <div class="settings-group">
+          <div class="settings-group-header">PRIVASI & PENYIMPANAN</div>
+          <div class="settings-card info-card">
+            <div class="info-svg-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <div class="info-content">
+              <strong>100% Offline & Lokal</strong>
+              <p>Semua catatan pengeluaran tersimpan langsung di browser iPhone kamu via IndexedDB & Sync Lokal. Tidak ada tracking, analitik, atau server cloud pihak ketiga.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Management Section -->
+        <div class="settings-group">
+          <div class="settings-group-header">MANAJEMEN & KEAMANAN DATA</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <span class="row-title">Total Catatan</span>
+              <span id="settings-total-records" class="row-value">0 transaksi</span>
+            </div>
+            <div class="settings-divider"></div>
+            <div class="settings-row">
+              <span class="row-title">Status Penyimpanan</span>
+              <span id="storage-status-badge" class="row-value"><span class="accent-dot" style="background:#10B981;"></span> Persisten (IndexedDB)</span>
+            </div>
+            <div class="settings-divider"></div>
+            
+            <!-- Backup & Restore -->
+            <div class="settings-row" id="btn-export-backup">
+              <div class="row-left">
+                <span class="settings-svg-badge">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                </span>
+                <span class="row-title">Cadangkan Data (Ekspor JSON)</span>
+              </div>
+              <span class="row-arrow">›</span>
+            </div>
+            <div class="settings-divider"></div>
+            
+            <div class="settings-row" id="btn-import-backup">
+              <div class="row-left">
+                <span class="settings-svg-badge">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                </span>
+                <span class="row-title">Pulihkan Data (Impor JSON)</span>
+              </div>
+              <span class="row-arrow">›</span>
+            </div>
+            <input type="file" id="import-json-input" accept=".json,application/json" style="display:none;">
+            <div class="settings-divider"></div>
+
+            <button id="btn-reset-data" class="destructive-row-btn">
+              <span>Hapus Semua Data Pengeluaran</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- About Section -->
+        <div class="settings-group">
+          <div class="settings-group-header">TENTANG</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <span class="row-title">Aplikasi</span>
+              <span class="row-value">SimpleNote (PWA)</span>
+            </div>
+            <div class="settings-divider"></div>
+            <div class="settings-row">
+              <span class="row-title">Aksen Tema</span>
+              <span class="row-value"><span class="accent-dot"></span> Oranye Terracotta</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Tab Navigation Bar (iOS Style) -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="tab-today">
+        <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+        </svg>
+        <span>Hari Ini</span>
+      </button>
+
+      <button class="nav-item" data-tab="tab-history">
+        <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        <span>Riwayat</span>
+      </button>
+
+      <button class="nav-item" data-tab="tab-stats">
+        <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>Statistik</span>
+      </button>
+
+      <button class="nav-item" data-tab="tab-settings">
+        <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="21" x2="4" y2="14"></line>
+          <line x1="4" y1="10" x2="4" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12" y2="3"></line>
+          <line x1="20" y1="21" x2="20" y2="16"></line>
+          <line x1="20" y1="12" x2="20" y2="3"></line>
+          <line x1="1" y1="14" x2="7" y2="14"></line>
+          <line x1="9" y1="8" x2="15" y2="8"></line>
+          <line x1="17" y1="16" x2="23" y2="16"></line>
+        </svg>
+        <span>Pengaturan</span>
+      </button>
+    </nav>
+
+    <!-- MODAL SHEET: ADD EXPENSE (Friction-zero < 5s) -->
+    <div id="modal-add-expense" class="modal-backdrop">
+      <div class="modal-sheet">
+        <div class="sheet-grabber"></div>
+        <div class="sheet-header">
+          <button id="btn-cancel-add" class="sheet-header-btn">Batal</button>
+          <span class="sheet-title">Catat Baru</span>
+          <div style="width: 50px;"></div>
+        </div>
+
+        <!-- Big Amount Display -->
+        <div class="sheet-amount-container">
+          <div id="add-amount-display" class="sheet-hero-amount">Rp 0</div>
+          
+          <button id="btn-toggle-date" class="date-badge-btn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span id="add-date-label">Hari ini</span>
+          </button>
+          <input type="datetime-local" id="add-date-input" class="hidden-date-picker">
+        </div>
+
+        <!-- Category Horizontal Scroll -->
+        <div class="sheet-category-scroll">
+          <div id="add-category-chips" class="chips-row"></div>
+        </div>
+
+        <!-- Note Input -->
+        <div class="sheet-input-box">
+          <span class="input-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+          </span>
+          <input type="text" id="add-note-input" placeholder="Catatan opsional (misal: Makan geprek)" autocomplete="off">
+        </div>
+
+        <!-- Fast Numeric Keypad -->
+        <div class="keypad-grid">
+          <button class="key-btn" data-key="1">1</button>
+          <button class="key-btn" data-key="2">2</button>
+          <button class="key-btn" data-key="3">3</button>
+          <button class="key-btn" data-key="4">4</button>
+          <button class="key-btn" data-key="5">5</button>
+          <button class="key-btn" data-key="6">6</button>
+          <button class="key-btn" data-key="7">7</button>
+          <button class="key-btn" data-key="8">8</button>
+          <button class="key-btn" data-key="9">9</button>
+          <button class="key-btn accent-key" data-key="000">000</button>
+          <button class="key-btn" data-key="0">0</button>
+          <button class="key-btn action-key" data-key="backspace">⌫</button>
+        </div>
+
+        <!-- Submit Button -->
+        <button id="btn-save-expense" class="sheet-save-btn" disabled>
+          <span>Simpan Pengeluaran</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL SHEET: EDIT EXPENSE -->
+    <div id="modal-edit-expense" class="modal-backdrop">
+      <div class="modal-sheet">
+        <div class="sheet-grabber"></div>
+        <div class="sheet-header">
+          <button id="btn-cancel-edit" class="sheet-header-btn">Batal</button>
+          <span class="sheet-title">Ubah Catatan</span>
+          <button id="btn-delete-expense" class="sheet-delete-btn">Hapus</button>
+        </div>
+
+        <!-- Big Amount Display -->
+        <div class="sheet-amount-container">
+          <div id="edit-amount-display" class="sheet-hero-amount">Rp 0</div>
+          <button id="btn-edit-toggle-date" class="date-badge-btn">
+            <span id="edit-date-label">Waktu</span>
+          </button>
+          <input type="datetime-local" id="edit-date-input" class="hidden-date-picker">
+        </div>
+
+        <!-- Category Horizontal Scroll -->
+        <div class="sheet-category-scroll">
+          <div id="edit-category-chips" class="chips-row"></div>
+        </div>
+
+        <!-- Custom Icon Selector for Transaction -->
+        <div class="edit-icon-selector-card">
+          <div class="edit-icon-selector-row">
+            <span class="edit-icon-label">Icon:</span>
+            <button type="button" id="btn-edit-select-icon" class="icon-picker-btn" title="Ganti Icon">
+              <span id="edit-icon-preview"></span>
+              <span class="icon-picker-arrow">▾</span>
+            </button>
+            <span id="edit-icon-status" class="edit-icon-status">Sesuai Kategori</span>
+          </div>
+          <!-- Grid of SVG Icons to pick from -->
+          <div id="edit-icon-picker-grid" class="icon-picker-grid" style="display: none;"></div>
+        </div>
+
+        <!-- Note Input -->
+        <div class="sheet-input-box">
+          <span class="input-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+          </span>
+          <input type="text" id="edit-note-input" placeholder="Catatan opsional" autocomplete="off">
+        </div>
+
+        <!-- Keypad for Editing -->
+        <div class="keypad-grid" id="edit-keypad">
+          <button class="key-btn" data-key="1">1</button>
+          <button class="key-btn" data-key="2">2</button>
+          <button class="key-btn" data-key="3">3</button>
+          <button class="key-btn" data-key="4">4</button>
+          <button class="key-btn" data-key="5">5</button>
+          <button class="key-btn" data-key="6">6</button>
+          <button class="key-btn" data-key="7">7</button>
+          <button class="key-btn" data-key="8">8</button>
+          <button class="key-btn" data-key="9">9</button>
+          <button class="key-btn accent-key" data-key="000">000</button>
+          <button class="key-btn" data-key="0">0</button>
+          <button class="key-btn action-key" data-key="backspace">⌫</button>
+        </div>
+
+        <!-- Save Changes Button -->
+        <button id="btn-update-expense" class="sheet-save-btn">
+          <span>Simpan Perubahan</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: CATEGORY MANAGER -->
+    <div id="modal-cat-manager" class="modal-backdrop">
+      <div class="modal-sheet">
+        <div class="sheet-grabber"></div>
+        <div class="sheet-header">
+          <button id="btn-close-cat-manager" class="sheet-header-btn">Tutup</button>
+          <span class="sheet-title">Kelola Kategori</span>
+          <div style="width: 50px;"></div>
+        </div>
+
+        <!-- New Category Form -->
+        <div class="add-cat-card">
+          <div class="add-cat-input-row">
+            <button type="button" id="btn-select-cat-icon" class="icon-picker-btn" title="Pilih Icon">
+              <span id="selected-cat-icon-preview"></span>
+              <span class="icon-picker-arrow">▾</span>
+            </button>
+            <input type="text" id="new-cat-name" placeholder="Nama Kategori Baru..." class="cat-name-input">
+            <button id="btn-add-category" class="add-cat-btn">Tambah</button>
+          </div>
+          <!-- Grid of SVG Icons to pick from -->
+          <div id="icon-picker-grid" class="icon-picker-grid" style="display: none;"></div>
+        </div>
+
+        <div id="categories-manager-list" class="manager-categories-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js?v=9"></script>
+</body>
+</html>
