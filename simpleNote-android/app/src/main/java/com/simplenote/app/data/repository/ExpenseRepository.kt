@@ -4,8 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.simplenote.app.data.local.CategoryDao
+import com.simplenote.app.data.local.CloudPreferences
 import com.simplenote.app.data.local.ExpenseDao
-import com.simplenote.app.data.local.SimpleNoteDatabase
 import com.simplenote.app.data.model.CategoryEntity
 import com.simplenote.app.data.model.ExpenseEntity
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +24,8 @@ import java.util.TimeZone
 
 class ExpenseRepository(
     private val expenseDao: ExpenseDao,
-    private val categoryDao: CategoryDao
+    private val categoryDao: CategoryDao,
+    val cloudPreferences: CloudPreferences
 ) {
     val allExpenses: Flow<List<ExpenseEntity>> = expenseDao.getAllExpenses()
     val allCategories: Flow<List<CategoryEntity>> = categoryDao.getAllCategories()
@@ -43,10 +44,6 @@ class ExpenseRepository(
         expenseDao.deleteExpense(expense)
     }
 
-    suspend fun deleteExpenseById(id: String) = withContext(Dispatchers.IO) {
-        expenseDao.deleteExpenseById(id)
-    }
-
     suspend fun deleteAllExpenses() = withContext(Dispatchers.IO) {
         expenseDao.deleteAllExpenses()
     }
@@ -60,40 +57,47 @@ class ExpenseRepository(
     }
 
     suspend fun ensureDefaultCategories() = withContext(Dispatchers.IO) {
-        if (categoryDao.getCategoryCount() == 0) {
-            categoryDao.insertAll(SimpleNoteDatabase.DEFAULT_CATEGORIES)
+        val current = categoryDao.getAllCategories().first()
+        if (current.isEmpty()) {
+            val defaults = listOf(
+                CategoryEntity("cat_food", "Makan & Minum", "utensils", true),
+                CategoryEntity("cat_trans", "Transportasi", "car", true),
+                CategoryEntity("cat_shop", "Belanja", "shopping-bag", true),
+                CategoryEntity("cat_fun", "Hiburan", "ticket", true),
+                CategoryEntity("cat_bill", "Tagihan", "receipt", true),
+                CategoryEntity("cat_health", "Kesehatan", "pill", true),
+                CategoryEntity("cat_edu", "Pendidikan", "book", true),
+                CategoryEntity("cat_coffee", "Kopi & Jajan", "coffee", true),
+                CategoryEntity("cat_charity", "Donasi", "heart", true),
+                CategoryEntity("cat_other", "Lainnya", "sparkles", true)
+            )
+            categoryDao.insertAll(defaults)
         }
     }
 
-    // MARK: - JSON Export
+    // MARK: - JSON Export & Import
     suspend fun exportBackupJson(): String = withContext(Dispatchers.IO) {
-        val expenses = allExpenses.first()
-        val categories = allCategories.first()
+        val expensesList = allExpenses.first()
+        val categoriesList = allCategories.first()
 
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
         sdf.timeZone = TimeZone.getTimeZone("UTC")
         val nowIso = sdf.format(Date())
 
         val payload = mapOf(
-            "version" to "1.3.0",
-            "exportDate" to nowIso,
-            "totalExpenses" to expenses.size,
-            "categories" to categories,
-            "expenses" to expenses
+            "expenses" to expensesList,
+            "categories" to categoriesList,
+            "lastUpdated" to nowIso
         )
         gson.toJson(payload)
     }
 
-    // MARK: - JSON Import
     suspend fun importBackupJson(jsonString: String): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val jsonObject = gson.fromJson(jsonString, JsonObject::class.java)
-            if (!jsonObject.has("expenses")) {
-                return@withContext Result.failure(IllegalArgumentException("Format file tidak valid (tidak ada field expenses)"))
-            }
 
             val expensesType = object : com.google.gson.reflect.TypeToken<List<ExpenseEntity>>() {}.type
-            val importedExpenses: List<ExpenseEntity> = gson.fromJson(jsonObject.get("expenses"), expensesType) ?: emptyList()
+            val importedExpenses: List<ExpenseEntity>? = gson.fromJson(jsonObject.get("expenses"), expensesType)
 
             if (jsonObject.has("categories")) {
                 val categoriesType = object : com.google.gson.reflect.TypeToken<List<CategoryEntity>>() {}.type
@@ -103,32 +107,69 @@ class ExpenseRepository(
                 }
             }
 
-            if (importedExpenses.isNotEmpty()) {
-                expenseDao.insertAll(importedExpenses)
+            if (importedExpenses.isNullOrEmpty()) {
+                return@withContext Result.failure(Exception("File cadangan tidak berisi pengeluaran"))
             }
 
+            expenseDao.insertAll(importedExpenses)
             Result.success(importedExpenses.size)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // MARK: - Local Wi-Fi Server Sync
+    // MARK: - Smart Cloud & Server Sync
+    fun sanitizeEndpoint(serverAddress: String): String {
+        var trimmed = serverAddress.trim().trimEnd('/')
+        if (trimmed.isEmpty()) return ""
+        if (trimmed.endsWith("/api/data")) return trimmed
+
+        if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+            trimmed = if (trimmed.contains(".vercel.app") || (!trimmed.contains(":") && trimmed.contains("."))) {
+                "https://$trimmed"
+            } else {
+                "http://$trimmed"
+            }
+        }
+        return "$trimmed/api/data"
+    }
+
+    suspend fun testServerConnection(serverAddress: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val endpoint = sanitizeEndpoint(serverAddress)
+            if (endpoint.isEmpty()) return@withContext Result.failure(Exception("Alamat URL tidak boleh kosong"))
+
+            val pingUrl = if (endpoint.contains("?")) "$endpoint&ping=true" else "$endpoint?ping=true"
+            val url = URL(pingUrl)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.connectTimeout = 6000
+            conn.readTimeout = 6000
+
+            val code = conn.responseCode
+            if (code in 200..299) {
+                val backend = conn.getHeaderField("X-Storage-Backend") ?: "Online"
+                Result.success("Terhubung ($backend)")
+            } else {
+                Result.failure(Exception("HTTP Error $code"))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception(e.localizedMessage ?: "Gagal menghubungi server cloud"))
+        }
+    }
+
     suspend fun syncWithLocalServer(serverIpPort: String): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val endpoint = if (serverIpPort.startsWith("http://") || serverIpPort.startsWith("https://")) {
-                "$serverIpPort/api/data"
-            } else {
-                "http://$serverIpPort/api/data"
-            }
+            val endpoint = sanitizeEndpoint(serverIpPort)
+            if (endpoint.isEmpty()) return@withContext Result.failure(Exception("Alamat URL kosong"))
 
             val url = URL(endpoint)
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            conn.connectTimeout = 4000
-            conn.readTimeout = 4000
+            conn.connectTimeout = 6000
+            conn.readTimeout = 6000
 
-            if (conn.responseCode == 200) {
+            if (conn.responseCode in 200..299) {
                 val reader = BufferedReader(InputStreamReader(conn.inputStream))
                 val response = reader.readText()
                 reader.close()
@@ -141,7 +182,9 @@ class ExpenseRepository(
                 if (serverExpenses.isEmpty() && localExpenses.isNotEmpty()) {
                     // Push to server
                     pushDataToServer(endpoint, localExpenses, allCategories.first())
-                    Result.success("Tersinkron: ${localExpenses.size} catatan diunggah ke laptop")
+                    cloudPreferences.lastSyncTime = System.currentTimeMillis()
+                    cloudPreferences.lastSyncStatus = "Sukses (${localExpenses.size} diunggah)"
+                    Result.success("Tersinkron: ${localExpenses.size} catatan diunggah ke cloud")
                 } else {
                     // Merge local and server
                     if (serverExpenses.isNotEmpty()) {
@@ -154,7 +197,16 @@ class ExpenseRepository(
                             categoryDao.insertAll(serverCats)
                         }
                     }
-                    Result.success("Tersinkron: ${serverExpenses.size} catatan diperbarui dari laptop")
+
+                    // If local had items not yet on server, push merged union to server
+                    val mergedExpenses = allExpenses.first()
+                    if (mergedExpenses.size > serverExpenses.size) {
+                        pushDataToServer(endpoint, mergedExpenses, allCategories.first())
+                    }
+
+                    cloudPreferences.lastSyncTime = System.currentTimeMillis()
+                    cloudPreferences.lastSyncStatus = "Sukses (${mergedExpenses.size} transaksi)"
+                    Result.success("Tersinkron: ${mergedExpenses.size} transaksi aktif")
                 }
             } else {
                 Result.failure(Exception("HTTP error: ${conn.responseCode}"))
@@ -170,8 +222,8 @@ class ExpenseRepository(
         conn.requestMethod = "POST"
         conn.setRequestProperty("Content-Type", "application/json")
         conn.doOutput = true
-        conn.connectTimeout = 4000
-        conn.readTimeout = 4000
+        conn.connectTimeout = 6000
+        conn.readTimeout = 6000
 
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
         sdf.timeZone = TimeZone.getTimeZone("UTC")

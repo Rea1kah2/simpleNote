@@ -1,5 +1,5 @@
 // Vercel Serverless Function: /api/data
-// Supports Upstash Redis / Vercel KV, Supabase, or Memory/Seed fallback with full CORS
+// Supports Upstash Redis / Vercel KV with command-array REST API, or Memory/Seed fallback with full CORS
 
 const SEED_DATA = {
   expenses: [
@@ -86,21 +86,43 @@ const SEED_DATA = {
 // In-memory fallback
 let memoryStore = { ...SEED_DATA };
 
-// Helper to interact with Upstash / Vercel KV REST API
-async function getFromKv() {
+function getKvCredentials() {
   const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  return { kvUrl, kvToken };
+}
 
+// Helper to interact with Upstash / Vercel KV REST API
+async function getFromKv() {
+  const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return null;
 
   try {
-    const res = await fetch(`${kvUrl}/get/simplenote_data`, {
-      headers: { Authorization: `Bearer ${kvToken}` }
+    // 1. Try standard root command array POST ["GET", "simplenote_data"]
+    const res = await fetch(`${kvUrl}/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${kvToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(["GET", "simplenote_data"])
     });
+
     if (res.ok) {
       const data = await res.json();
       if (data && data.result) {
         return typeof data.result === "string" ? JSON.parse(data.result) : data.result;
+      }
+    }
+
+    // 2. Fallback to path GET /get/simplenote_data
+    const pathRes = await fetch(`${kvUrl}/get/simplenote_data`, {
+      headers: { Authorization: `Bearer ${kvToken}` }
+    });
+    if (pathRes.ok) {
+      const pathData = await pathRes.json();
+      if (pathData && pathData.result) {
+        return typeof pathData.result === "string" ? JSON.parse(pathData.result) : pathData.result;
       }
     }
   } catch (err) {
@@ -110,21 +132,34 @@ async function getFromKv() {
 }
 
 async function saveToKv(payload) {
-  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-
+  const { kvUrl, kvToken } = getKvCredentials();
   if (!kvUrl || !kvToken) return false;
 
+  const serialized = JSON.stringify(payload);
+
   try {
-    const res = await fetch(`${kvUrl}/set/simplenote_data`, {
+    // 1. Primary: Root command array ["SET", "simplenote_data", payload_json]
+    const res = await fetch(`${kvUrl}/`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${kvToken}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(JSON.stringify(payload))
+      body: JSON.stringify(["SET", "simplenote_data", serialized])
     });
-    return res.ok;
+
+    if (res.ok) return true;
+
+    // 2. Fallback: Path-based POST /set/simplenote_data
+    const fallbackRes = await fetch(`${kvUrl}/set/simplenote_data`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${kvToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(serialized)
+    });
+    return fallbackRes.ok;
   } catch (err) {
     console.error("KV write error:", err);
     return false;
@@ -135,16 +170,41 @@ module.exports = async function handler(req, res) {
   // Set Universal CORS Headers for PWA & Android app
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
+  const { kvUrl } = getKvCredentials();
+  const storageBackend = kvUrl ? "Upstash-KV" : "Memory-Fallback";
+  res.setHeader("X-Storage-Backend", storageBackend);
+
+  // Ping / Health Check mode
+  if (req.query && req.query.ping === "true") {
+    return res.status(200).json({
+      status: "ok",
+      appName: "SimpleNote Backend",
+      timestamp: new Date().toISOString(),
+      storage: storageBackend,
+      kvConnected: !!kvUrl
+    });
+  }
+
   // 1. GET: Fetch data
   if (req.method === "GET") {
-    const kvData = await getFromKv();
-    const dataToReturn = kvData || memoryStore;
+    let dataToReturn = await getFromKv();
+
+    // If KV is connected but empty, seed it with initial data so it's ready
+    if (!dataToReturn && kvUrl) {
+      await saveToKv(SEED_DATA);
+      dataToReturn = SEED_DATA;
+    }
+
+    if (!dataToReturn) {
+      dataToReturn = memoryStore;
+    }
+
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "no-store, max-age=0");
     return res.status(200).json(dataToReturn);
@@ -165,7 +225,7 @@ module.exports = async function handler(req, res) {
       };
 
       // Update in KV if configured
-      await saveToKv(updatedPayload);
+      const kvSaved = await saveToKv(updatedPayload);
 
       // Always update in-memory store
       memoryStore = updatedPayload;
@@ -174,6 +234,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({
         success: true,
         message: "Data saved successfully",
+        storage: kvSaved ? "Upstash-KV" : "Memory-Store",
         lastUpdated: updatedPayload.lastUpdated,
         totalExpenses: updatedPayload.expenses.length
       });

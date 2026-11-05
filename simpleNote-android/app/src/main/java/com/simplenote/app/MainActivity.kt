@@ -73,6 +73,11 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.triggerBackgroundAutoSync()
+    }
 }
 
 @Composable
@@ -85,6 +90,9 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
     val isAddSheetOpen by viewModel.isAddSheetOpen.collectAsState()
     val editingExpense by viewModel.editingExpense.collectAsState()
     val isCategoryManagerOpen by viewModel.isCategoryManagerOpen.collectAsState()
+    val cloudUrl by viewModel.cloudUrl.collectAsState()
+    val isAutoSyncEnabled by viewModel.isAutoSyncEnabled.collectAsState()
+    val lastSyncStatus by viewModel.lastSyncStatus.collectAsState()
 
     Scaffold(
         containerColor = PaperBackground,
@@ -154,6 +162,12 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                 AppTab.SETTINGS -> {
                     SettingsScreen(
                         totalRecords = expenses.size,
+                        cloudUrl = cloudUrl,
+                        isAutoSyncEnabled = isAutoSyncEnabled,
+                        lastSyncStatus = lastSyncStatus,
+                        onSaveCloudUrl = { viewModel.setCloudUrl(it) },
+                        onToggleAutoSync = { viewModel.setAutoSyncEnabled(it) },
+                        onTestConnection = { viewModel.testConnection(it) },
                         onOpenCategoryManager = { viewModel.isCategoryManagerOpen.value = true },
                         onExportJson = { viewModel.getExportJson() },
                         onImportJson = { viewModel.importBackup(it) },

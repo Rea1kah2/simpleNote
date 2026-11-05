@@ -524,7 +524,7 @@ function updateSyncIndicator(isOnline) {
   const badge = document.getElementById('storage-status-badge');
   if (badge) {
     if (isOnline) {
-      badge.innerHTML = '<span class="accent-dot" style="background:#10B981;"></span> Tersinkron & Persisten';
+      badge.innerHTML = '<span class="accent-dot" style="background:#10B981;"></span> Cloud Tersinkron (24/7)';
     } else {
       badge.innerHTML = '<span class="accent-dot" style="background:#F59E0B;"></span> Lokal Offline (IndexedDB)';
     }

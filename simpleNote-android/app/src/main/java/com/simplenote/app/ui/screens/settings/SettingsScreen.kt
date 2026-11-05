@@ -35,6 +35,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -66,6 +68,12 @@ import java.io.File
 @Composable
 fun SettingsScreen(
     totalRecords: Int,
+    cloudUrl: String,
+    isAutoSyncEnabled: Boolean,
+    lastSyncStatus: String,
+    onSaveCloudUrl: (String) -> Unit,
+    onToggleAutoSync: (Boolean) -> Unit,
+    onTestConnection: (String) -> Unit,
     onOpenCategoryManager: () -> Unit,
     onExportJson: suspend () -> String,
     onImportJson: (String) -> Unit,
@@ -75,7 +83,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var serverAddress by remember { mutableStateOf("192.168.18.87:8080") }
+    var serverAddress by remember(cloudUrl) { mutableStateOf(cloudUrl) }
     var showResetDialog by remember { mutableStateOf(false) }
 
     // Import file picker
@@ -260,7 +268,7 @@ fun SettingsScreen(
             }
         }
 
-        // Local Wi-Fi Sync Card
+        // Cloud & Server 24/7 Sync Card
         item {
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -269,45 +277,123 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "SINKRONISASI SERVER LAPTOP (WI-FI)",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StoneMuted,
-                        letterSpacing = 0.5.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        OutlinedTextField(
-                            value = serverAddress,
-                            onValueChange = { serverAddress = it },
-                            placeholder = { Text("IP:Port Laptop", fontSize = 13.sp) },
-                            singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = PaperBackground,
-                                unfocusedContainerColor = PaperBackground,
-                                focusedBorderColor = TerracottaPrimary,
-                                unfocusedBorderColor = BorderBeige
-                            ),
+                        Text(
+                            text = "SINKRONISASI CLOUD & SERVER (24/7)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StoneMuted,
+                            letterSpacing = 0.5.sp,
                             modifier = Modifier.weight(1f)
                         )
+                        if (lastSyncStatus.isNotBlank()) {
+                            Text(
+                                text = lastSyncStatus,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = SuccessGreen
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Sinkronisasi otomatis dua arah dengan Vercel Cloud atau server lokal.",
+                        fontSize = 12.sp,
+                        color = StoneMuted
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = serverAddress,
+                        onValueChange = {
+                            serverAddress = it
+                            onSaveCloudUrl(it)
+                        },
+                        placeholder = { Text("https://simplenote-kamu.vercel.app", fontSize = 12.sp, color = StoneMuted) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = PaperBackground,
+                            unfocusedContainerColor = PaperBackground,
+                            focusedBorderColor = TerracottaPrimary,
+                            unfocusedBorderColor = BorderBeige
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                onSaveCloudUrl(serverAddress.trim())
+                                onTestConnection(serverAddress.trim())
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = PaperBackground),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderBeige),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = CharcoalInk, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Tes Koneksi", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CharcoalInk)
+                        }
 
                         Button(
-                            onClick = { onSyncServer(serverAddress.trim()) },
+                            onClick = {
+                                onSaveCloudUrl(serverAddress.trim())
+                                onSyncServer(serverAddress.trim())
+                            },
                             colors = ButtonDefaults.buttonColors(containerColor = CharcoalInk),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Sinkron", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Sinkronkan", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Auto-sync switch row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(PaperBackground)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Auto-Sync Latar Belakang",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CharcoalInk
+                            )
+                            Text(
+                                text = "Otomatis sinkron saat aplikasi dibuka",
+                                fontSize = 11.sp,
+                                color = StoneMuted
+                            )
+                        }
+                        Switch(
+                            checked = isAutoSyncEnabled,
+                            onCheckedChange = { onToggleAutoSync(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = TerracottaPrimary,
+                                uncheckedThumbColor = StoneMuted,
+                                uncheckedTrackColor = BorderBeige
+                            )
+                        )
                     }
                 }
             }

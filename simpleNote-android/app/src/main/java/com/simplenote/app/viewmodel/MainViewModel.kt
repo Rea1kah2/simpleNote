@@ -37,6 +37,12 @@ class MainViewModel(
     var isAddSheetOpen = MutableStateFlow(false)
     var isCategoryManagerOpen = MutableStateFlow(false)
 
+    // Cloud & Sync state
+    val cloudUrl = MutableStateFlow(repository.cloudPreferences.cloudUrl)
+    val isAutoSyncEnabled = MutableStateFlow(repository.cloudPreferences.isAutoSyncEnabled)
+    val lastSyncStatus = MutableStateFlow(repository.cloudPreferences.lastSyncStatus)
+    val isSyncing = MutableStateFlow(false)
+
     fun showToast(type: ToastType, title: String, message: String) {
         toastJob?.cancel()
         _toast.value = ToastMessage(type, title, message)
@@ -49,6 +55,17 @@ class MainViewModel(
     fun dismissToast() {
         toastJob?.cancel()
         _toast.value = null
+    }
+
+    fun setCloudUrl(url: String) {
+        val trimmed = url.trim()
+        repository.cloudPreferences.cloudUrl = trimmed
+        cloudUrl.value = trimmed
+    }
+
+    fun setAutoSyncEnabled(enabled: Boolean) {
+        repository.cloudPreferences.isAutoSyncEnabled = enabled
+        isAutoSyncEnabled.value = enabled
     }
 
     fun addExpense(amount: Long, category: CategoryEntity, note: String, timestamp: String) {
@@ -64,6 +81,11 @@ class MainViewModel(
             repository.insertExpense(entity)
             isAddSheetOpen.value = false
             showToast(ToastType.SUCCESS, "Pengeluaran Dicatat", "${category.name} - Rp $amount")
+
+            // If auto-sync is on, push update in background
+            if (isAutoSyncEnabled.value && cloudUrl.value.isNotBlank()) {
+                triggerBackgroundAutoSync()
+            }
         }
     }
 
@@ -72,6 +94,10 @@ class MainViewModel(
             repository.updateExpense(expense)
             editingExpense.value = null
             showToast(ToastType.INFO, "Perubahan Disimpan", "${expense.categoryName} diperbarui")
+
+            if (isAutoSyncEnabled.value && cloudUrl.value.isNotBlank()) {
+                triggerBackgroundAutoSync()
+            }
         }
     }
 
@@ -80,6 +106,10 @@ class MainViewModel(
             repository.deleteExpense(expense)
             editingExpense.value = null
             showToast(ToastType.DANGER, "Catatan Dihapus", "${expense.categoryName} telah dihapus")
+
+            if (isAutoSyncEnabled.value && cloudUrl.value.isNotBlank()) {
+                triggerBackgroundAutoSync()
+            }
         }
     }
 
@@ -93,6 +123,10 @@ class MainViewModel(
             )
             repository.insertCategory(newCat)
             showToast(ToastType.SUCCESS, "Kategori Ditambahkan", "Kategori \"$name\" siap digunakan")
+
+            if (isAutoSyncEnabled.value && cloudUrl.value.isNotBlank()) {
+                triggerBackgroundAutoSync()
+            }
         }
     }
 
@@ -100,6 +134,10 @@ class MainViewModel(
         viewModelScope.launch {
             repository.deleteCategory(category)
             showToast(ToastType.DANGER, "Kategori Dihapus", "Kategori \"${category.name}\" telah dihapus")
+
+            if (isAutoSyncEnabled.value && cloudUrl.value.isNotBlank()) {
+                triggerBackgroundAutoSync()
+            }
         }
     }
 
@@ -113,21 +151,59 @@ class MainViewModel(
             if (result.isSuccess) {
                 val count = result.getOrNull() ?: 0
                 showToast(ToastType.SUCCESS, "Cadangan Dipulihkan", "$count transaksi berhasil dimuat")
+                if (isAutoSyncEnabled.value && cloudUrl.value.isNotBlank()) {
+                    triggerBackgroundAutoSync()
+                }
             } else {
                 showToast(ToastType.DANGER, "Gagal Memulihkan", result.exceptionOrNull()?.message ?: "Format file salah")
             }
         }
     }
 
-    fun syncWithServer(serverAddress: String) {
+    fun testConnection(serverAddress: String) {
         viewModelScope.launch {
-            showToast(ToastType.INFO, "Menghubungkan Server...", "Mengontak $serverAddress")
-            val result = repository.syncWithLocalServer(serverAddress)
+            setCloudUrl(serverAddress)
+            showToast(ToastType.INFO, "Menguji Koneksi...", "Menghubungi server cloud...")
+            val result = repository.testServerConnection(serverAddress)
             if (result.isSuccess) {
-                showToast(ToastType.SUCCESS, "Sinkronisasi Berhasil", result.getOrNull() ?: "Tersinkron")
+                val msg = result.getOrNull() ?: "Terhubung"
+                showToast(ToastType.SUCCESS, "Koneksi Berhasil", msg)
             } else {
-                showToast(ToastType.DANGER, "Gagal Sinkronisasi", result.exceptionOrNull()?.localizedMessage ?: "Server tidak dapat dijangkau")
+                showToast(ToastType.DANGER, "Gagal Menghubungi", result.exceptionOrNull()?.localizedMessage ?: "Server tidak dapat dijangkau")
             }
+        }
+    }
+
+    fun syncWithServer(serverAddress: String, isSilent: Boolean = false) {
+        if (isSyncing.value) return
+        isSyncing.value = true
+
+        viewModelScope.launch {
+            setCloudUrl(serverAddress)
+            if (!isSilent) {
+                showToast(ToastType.INFO, "Menghubungkan Server...", "Menyinkronkan data dengan cloud...")
+            }
+            val result = repository.syncWithLocalServer(serverAddress)
+            isSyncing.value = false
+
+            if (result.isSuccess) {
+                val msg = result.getOrNull() ?: "Tersinkron"
+                lastSyncStatus.value = repository.cloudPreferences.lastSyncStatus
+                if (!isSilent) {
+                    showToast(ToastType.SUCCESS, "Sinkronisasi Berhasil", msg)
+                }
+            } else {
+                if (!isSilent) {
+                    showToast(ToastType.DANGER, "Gagal Sinkronisasi", result.exceptionOrNull()?.localizedMessage ?: "Server tidak dapat dijangkau")
+                }
+            }
+        }
+    }
+
+    fun triggerBackgroundAutoSync() {
+        val targetUrl = cloudUrl.value
+        if (isAutoSyncEnabled.value && targetUrl.isNotBlank() && !isSyncing.value) {
+            syncWithServer(targetUrl, isSilent = true)
         }
     }
 
