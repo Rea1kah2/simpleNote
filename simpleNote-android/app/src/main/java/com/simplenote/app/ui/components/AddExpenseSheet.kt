@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,6 +24,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -63,6 +65,7 @@ fun AddExpenseSheet(
         mutableStateOf(categories.firstOrNull() ?: CategoryEntity("cat_food", "Makan & Minum", "utensils"))
     }
     var note by remember { mutableStateOf("") }
+    var showConfirmAddDialog by remember { mutableStateOf(false) }
 
     val amountLong = amountString.toLongOrNull() ?: 0L
     val isFormValid = amountLong > 0
@@ -204,10 +207,7 @@ fun AddExpenseSheet(
             Button(
                 onClick = {
                     if (isFormValid) {
-                        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-                        sdf.timeZone = TimeZone.getTimeZone("UTC")
-                        val isoTimestamp = sdf.format(Date())
-                        onSaveExpense(amountLong, selectedCategory, note.trim(), isoTimestamp)
+                        showConfirmAddDialog = true
                     }
                 },
                 enabled = isFormValid,
@@ -230,5 +230,34 @@ fun AddExpenseSheet(
                 )
             }
         }
+    }
+
+    if (showConfirmAddDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmAddDialog = false },
+            title = { Text("Catat Pengeluaran?", fontWeight = FontWeight.Bold) },
+            text = {
+                val formattedAmt = java.text.NumberFormat.getCurrencyInstance(Locale("id", "ID")).apply {
+                    maximumFractionDigits = 0
+                }.format(amountLong).replace("Rp", "Rp ")
+                Text("Catat pengeluaran $formattedAmt untuk kategori \"${selectedCategory.name}\"?")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirmAddDialog = false
+                    val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+                    sdf.timeZone = TimeZone.getTimeZone("UTC")
+                    val isoTimestamp = sdf.format(Date())
+                    onSaveExpense(amountLong, selectedCategory, note.trim(), isoTimestamp)
+                }) {
+                    Text("Simpan", color = TerracottaPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmAddDialog = false }) {
+                    Text("Batal", color = CharcoalInk)
+                }
+            }
+        )
     }
 }

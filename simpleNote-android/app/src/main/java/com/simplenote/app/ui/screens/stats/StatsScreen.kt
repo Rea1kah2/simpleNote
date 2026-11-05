@@ -73,13 +73,11 @@ fun StatsScreen(
         val y = cal.get(Calendar.YEAR)
         val m = cal.get(Calendar.MONTH)
         expenses.filter { exp ->
-            try {
-                val d = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(exp.timestamp.take(19))
-                if (d != null) {
-                    val c = Calendar.getInstance().apply { time = d }
-                    c.get(Calendar.YEAR) == y && c.get(Calendar.MONTH) == m
-                } else false
-            } catch (e: Exception) { false }
+            val d = exp.parsedDate()
+            if (d != null) {
+                val c = Calendar.getInstance().apply { time = d }
+                c.get(Calendar.YEAR) == y && c.get(Calendar.MONTH) == m
+            } else false
         }
     }
 

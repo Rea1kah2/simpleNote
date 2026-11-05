@@ -165,6 +165,7 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                         cloudUrl = cloudUrl,
                         isAutoSyncEnabled = isAutoSyncEnabled,
                         lastSyncStatus = lastSyncStatus,
+                        hasDeletePassword = viewModel.hasDeletePassword(),
                         onSaveCloudUrl = { viewModel.setCloudUrl(it) },
                         onToggleAutoSync = { viewModel.setAutoSyncEnabled(it) },
                         onTestConnection = { viewModel.testConnection(it) },
@@ -172,6 +173,9 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                         onExportJson = { viewModel.getExportJson() },
                         onImportJson = { viewModel.importBackup(it) },
                         onSyncServer = { viewModel.syncWithServer(it) },
+                        onSetDeletePassword = { viewModel.setDeletePassword(it) },
+                        onVerifyDeletePassword = { viewModel.verifyDeletePassword(it) },
+                        onChangeDeletePassword = { oldPass, newPass -> viewModel.changeDeletePassword(oldPass, newPass) },
                         onResetData = { viewModel.clearAllData() }
                     )
                 }

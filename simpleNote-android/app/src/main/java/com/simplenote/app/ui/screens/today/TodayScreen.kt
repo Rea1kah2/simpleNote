@@ -57,14 +57,12 @@ fun TodayScreen(
     val todayExpenses = remember(expenses) {
         val todayCal = Calendar.getInstance()
         expenses.filter { exp ->
-            try {
-                val d = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(exp.timestamp.take(19))
-                if (d != null) {
-                    val c = Calendar.getInstance().apply { time = d }
-                    c.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
-                            c.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
-                } else false
-            } catch (e: Exception) { false }
+            val d = exp.parsedDate()
+            if (d != null) {
+                val c = Calendar.getInstance().apply { time = d }
+                c.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
+                        c.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
+            } else false
         }
     }
 
@@ -217,10 +215,16 @@ fun ExpenseRowCard(
     onClick: () -> Unit
 ) {
     val timeString = remember(expense.timestamp) {
-        try {
-            val d = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(expense.timestamp.take(19))
-            if (d != null) SimpleDateFormat("HH:mm", Locale("id", "ID")).format(d) else ""
-        } catch (e: Exception) { "" }
+        expense.parsedDate()?.let {
+            SimpleDateFormat("HH:mm", Locale("id", "ID")).format(it)
+        } ?: ""
+    }
+
+    val editedString = remember(expense.updatedAt) {
+        expense.parsedUpdatedDate()?.let {
+            val sdf = SimpleDateFormat("d MMM HH:mm", Locale("id", "ID"))
+            "Diedit: ${sdf.format(it)}"
+        }
     }
 
     Row(
@@ -279,6 +283,14 @@ fun ExpenseRowCard(
                     text = timeString,
                     fontSize = 11.sp,
                     color = StoneMuted
+                )
+            }
+            if (editedString != null) {
+                Text(
+                    text = editedString,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TerracottaPrimary
                 )
             }
         }

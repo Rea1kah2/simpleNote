@@ -165,13 +165,11 @@ fun InteractiveTrendChart(
         }
 
         val parsedExpenses = monthlyExpenses.mapNotNull { exp ->
-            try {
-                val d = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(exp.timestamp.take(19))
-                if (d != null) {
-                    val c = Calendar.getInstance().apply { time = d }
-                    c.get(Calendar.DAY_OF_MONTH) to exp
-                } else null
-            } catch (e: Exception) { null }
+            val d = exp.parsedDate()
+            if (d != null) {
+                val c = Calendar.getInstance().apply { time = d }
+                c.get(Calendar.DAY_OF_MONTH) to exp
+            } else null
         }
 
         list.map { w ->
@@ -186,13 +184,11 @@ fun InteractiveTrendChart(
     // Compute Days
     val days = remember(monthlyExpenses, daysInMonth) {
         val parsedExpenses = monthlyExpenses.mapNotNull { exp ->
-            try {
-                val d = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(exp.timestamp.take(19))
-                if (d != null) {
-                    val c = Calendar.getInstance().apply { time = d }
-                    c.get(Calendar.DAY_OF_MONTH) to exp
-                } else null
-            } catch (e: Exception) { null }
+            val d = exp.parsedDate()
+            if (d != null) {
+                val c = Calendar.getInstance().apply { time = d }
+                c.get(Calendar.DAY_OF_MONTH) to exp
+            } else null
         }
 
         val dayFormat = SimpleDateFormat("EEE", Locale("id", "ID"))
@@ -220,13 +216,11 @@ fun InteractiveTrendChart(
             if (activeW != null) {
                 val title = "Minggu ${activeW.label} (${activeW.startDay} - ${activeW.endDay} $monthName)"
                 val matching = monthlyExpenses.filter { exp ->
-                    try {
-                        val d = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(exp.timestamp.take(19))
-                        if (d != null) {
-                            val c = Calendar.getInstance().apply { time = d }
-                            c.get(Calendar.DAY_OF_MONTH) in activeW.startDay..activeW.endDay
-                        } else false
-                    } catch (e: Exception) { false }
+                    val d = exp.parsedDate()
+                    if (d != null) {
+                        val c = Calendar.getInstance().apply { time = d }
+                        c.get(Calendar.DAY_OF_MONTH) in activeW.startDay..activeW.endDay
+                    } else false
                 }
                 onPeriodSelected(title, matching)
             }
@@ -235,13 +229,11 @@ fun InteractiveTrendChart(
             if (activeD != null) {
                 val title = "${activeD.dayNameShort}, ${activeD.day} $monthName ${if (activeD.isToday) "(Hari Ini)" else ""}"
                 val matching = monthlyExpenses.filter { exp ->
-                    try {
-                        val d = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(exp.timestamp.take(19))
-                        if (d != null) {
-                            val c = Calendar.getInstance().apply { time = d }
-                            c.get(Calendar.DAY_OF_MONTH) == activeD.day
-                        } else false
-                    } catch (e: Exception) { false }
+                    val d = exp.parsedDate()
+                    if (d != null) {
+                        val c = Calendar.getInstance().apply { time = d }
+                        c.get(Calendar.DAY_OF_MONTH) == activeD.day
+                    } else false
                 }
                 onPeriodSelected(title, matching)
             }
@@ -322,13 +314,11 @@ fun InteractiveTrendChart(
                                 selectedWeekId = w.id
                                 val title = "Minggu ${w.label} (${w.startDay} - ${w.endDay} $monthName)"
                                 val matching = monthlyExpenses.filter { exp ->
-                                    try {
-                                        val d = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(exp.timestamp.take(19))
-                                        if (d != null) {
-                                            val c = Calendar.getInstance().apply { time = d }
-                                            c.get(Calendar.DAY_OF_MONTH) in w.startDay..w.endDay
-                                        } else false
-                                    } catch (e: Exception) { false }
+                                    val d = exp.parsedDate()
+                                    if (d != null) {
+                                        val c = Calendar.getInstance().apply { time = d }
+                                        c.get(Calendar.DAY_OF_MONTH) in w.startDay..w.endDay
+                                    } else false
                                 }
                                 onPeriodSelected(title, matching)
                             }
@@ -395,13 +385,11 @@ fun InteractiveTrendChart(
                                 selectedDay = d.day
                                 val title = "${d.dayNameShort}, ${d.day} $monthName ${if (d.isToday) "(Hari Ini)" else ""}"
                                 val matching = monthlyExpenses.filter { exp ->
-                                    try {
-                                        val parseD = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(exp.timestamp.take(19))
-                                        if (parseD != null) {
-                                            val c = Calendar.getInstance().apply { time = parseD }
-                                            c.get(Calendar.DAY_OF_MONTH) == d.day
-                                        } else false
-                                    } catch (e: Exception) { false }
+                                    val parseD = exp.parsedDate()
+                                    if (parseD != null) {
+                                        val c = Calendar.getInstance().apply { time = parseD }
+                                        c.get(Calendar.DAY_OF_MONTH) == d.day
+                                    } else false
                                 }
                                 onPeriodSelected(title, matching)
                             }

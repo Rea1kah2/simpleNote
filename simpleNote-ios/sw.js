@@ -1,4 +1,4 @@
-const CACHE_NAME = 'simplenote-v9';
+const CACHE_NAME = 'simplenote-v10';
 const ASSETS = [
   '/',
   '/index.html',

@@ -239,6 +239,19 @@ function formatTime(dateObj) {
   return `${h}:${m}`;
 }
 
+function formatEditedTime(dateObj) {
+  if (!dateObj) return '';
+  const d = new Date(dateObj);
+  const now = new Date();
+  const isSameDay = d.getFullYear() === now.getFullYear() &&
+                    d.getMonth() === now.getMonth() &&
+                    d.getDate() === now.getDate();
+  const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  if (isSameDay) return timeStr;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${timeStr}`;
+}
+
 function formatRelativeDate(dateObj) {
   const d = new Date(dateObj);
   const now = new Date();
@@ -800,6 +813,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupAddExpenseModal();
   setupEditExpenseModal();
   setupCategoryManagerModal();
+  setupConfirmModal();
+  setupAuthModal();
 
   renderAll();
 
@@ -825,6 +840,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     () => { document.getElementById('modal-cat-manager').classList.remove('open'); }
   );
 
+  attachSheetSwipeToDismiss(
+    document.getElementById('modal-confirm-dialog'),
+    document.querySelector('#modal-confirm-dialog .modal-sheet'),
+    () => { document.getElementById('modal-confirm-dialog').classList.remove('open'); }
+  );
+
+  attachSheetSwipeToDismiss(
+    document.getElementById('modal-delete-password'),
+    document.querySelector('#modal-delete-password .modal-sheet'),
+    () => { document.getElementById('modal-delete-password').classList.remove('open'); }
+  );
+
   // Re-sync when app becomes visible or reconnected
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
@@ -839,7 +866,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Register service worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=9').catch((err) => {
+    navigator.serviceWorker.register('sw.js?v=10').catch((err) => {
       console.log('SW registration note:', err);
     });
   }
@@ -952,6 +979,7 @@ function renderTodayView() {
 function createExpenseRowElement(exp) {
   const row = document.createElement('div');
   row.className = 'expense-row';
+  const editedHtml = exp.updatedAt ? `<div class="expense-edited">Diedit: ${formatEditedTime(exp.updatedAt)}</div>` : '';
   row.innerHTML = `
     <span class="expense-svg-icon">${getCategoryIcon(exp, 18)}</span>
     <div class="expense-detail">
@@ -961,6 +989,7 @@ function createExpenseRowElement(exp) {
     <div class="expense-right">
       <div class="expense-amount">${formatRupiah(exp.amount)}</div>
       <div class="expense-time">${formatTime(exp.timestamp)}</div>
+      ${editedHtml}
     </div>
   `;
 
@@ -1611,6 +1640,230 @@ function renderStatsTrendChart() {
 }
 
 // ==========================================================================
+// SECURITY & PASSWORD HELPERS
+// ==========================================================================
+const KEY_DELETE_PASSWORD_HASH = 'sn_delete_password_hash';
+
+async function sha256Hex(text) {
+  const enc = new TextEncoder().encode(text);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function hasDeletePassword() {
+  return Boolean(localStorage.getItem(KEY_DELETE_PASSWORD_HASH));
+}
+
+function setDeletePasswordHash(hash) {
+  localStorage.setItem(KEY_DELETE_PASSWORD_HASH, hash);
+  updatePasswordRowVisibility();
+}
+
+async function verifyDeletePassword(plainText) {
+  const stored = localStorage.getItem(KEY_DELETE_PASSWORD_HASH);
+  if (!stored) return false;
+  const hash = await sha256Hex(plainText);
+  return stored === hash;
+}
+
+function updatePasswordRowVisibility() {
+  const row = document.getElementById('row-change-password');
+  const divider = document.getElementById('row-change-password-divider');
+  const hasPass = hasDeletePassword();
+  if (row) row.style.display = hasPass ? 'flex' : 'none';
+  if (divider) divider.style.display = hasPass ? 'block' : 'none';
+}
+
+// ==========================================================================
+// REUSABLE CONFIRMATION MODAL
+// ==========================================================================
+let activeConfirmCallback = null;
+
+function showConfirmModal({ icon = '⚠️', title = 'Konfirmasi', message, confirmText = 'Lanjutkan', isDanger = false, onConfirm }) {
+  const modal = document.getElementById('modal-confirm-dialog');
+  if (!modal) {
+    if (confirm(message)) {
+      if (typeof onConfirm === 'function') onConfirm();
+    }
+    return;
+  }
+  document.getElementById('confirm-dialog-icon').textContent = icon;
+  document.getElementById('confirm-dialog-title').textContent = title;
+  document.getElementById('confirm-dialog-message').textContent = message;
+  const proceedBtn = document.getElementById('btn-confirm-proceed');
+  proceedBtn.textContent = confirmText;
+  proceedBtn.classList.toggle('danger', Boolean(isDanger));
+  activeConfirmCallback = onConfirm;
+  modal.classList.add('open');
+}
+
+function setupConfirmModal() {
+  const modal = document.getElementById('modal-confirm-dialog');
+  if (!modal) return;
+  const cancelBtn = document.getElementById('btn-confirm-cancel');
+  const proceedBtn = document.getElementById('btn-confirm-proceed');
+
+  cancelBtn.addEventListener('click', () => {
+    modal.classList.remove('open');
+    activeConfirmCallback = null;
+  });
+
+  proceedBtn.addEventListener('click', () => {
+    modal.classList.remove('open');
+    if (typeof activeConfirmCallback === 'function') {
+      const cb = activeConfirmCallback;
+      activeConfirmCallback = null;
+      cb();
+    }
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('open');
+      activeConfirmCallback = null;
+    }
+  });
+}
+
+// ==========================================================================
+// AUTH MODAL FOR SENSITIVE ACTIONS
+// ==========================================================================
+let currentAuthMode = 'verify'; // 'setup' | 'verify' | 'change'
+let onAuthSuccessCallback = null;
+
+function openAuthModal(mode, onSuccess) {
+  currentAuthMode = mode;
+  onAuthSuccessCallback = onSuccess;
+  const modal = document.getElementById('modal-delete-password');
+  if (!modal) return;
+  const title = document.getElementById('auth-modal-title');
+  const desc = document.getElementById('auth-modal-desc');
+  const oldField = document.getElementById('auth-field-old');
+  const newField = document.getElementById('auth-field-new');
+  const confirmField = document.getElementById('auth-field-confirm');
+  const newLabel = document.getElementById('auth-new-label');
+  const errorMsg = document.getElementById('auth-error-msg');
+  const submitBtn = document.getElementById('btn-auth-submit');
+
+  document.getElementById('input-auth-old').value = '';
+  document.getElementById('input-auth-new').value = '';
+  document.getElementById('input-auth-confirm').value = '';
+  errorMsg.style.display = 'none';
+  errorMsg.textContent = '';
+
+  if (mode === 'setup') {
+    title.textContent = 'Buat Sandi Rahasia';
+    desc.textContent = 'Untuk melindungi data sensitif, tentukan sandi rahasia yang hanya kamu ketahui sebelum menghapus semua data.';
+    oldField.style.display = 'none';
+    newField.style.display = 'block';
+    confirmField.style.display = 'block';
+    newLabel.textContent = 'Sandi Rahasia Baru';
+    submitBtn.textContent = 'Simpan & Lanjut';
+    submitBtn.classList.remove('danger');
+  } else if (mode === 'verify') {
+    title.textContent = 'Autentikasi Sandi';
+    desc.textContent = 'Masukkan sandi rahasia untuk memverifikasi penghapusan seluruh riwayat transaksi.';
+    oldField.style.display = 'none';
+    newField.style.display = 'block';
+    confirmField.style.display = 'none';
+    newLabel.textContent = 'Sandi Rahasia';
+    submitBtn.textContent = 'Verifikasi';
+    submitBtn.classList.add('danger');
+  } else if (mode === 'change') {
+    title.textContent = 'Ubah Sandi Rahasia';
+    desc.textContent = 'Masukkan sandi lama dan tentukan sandi rahasia yang baru.';
+    oldField.style.display = 'block';
+    newField.style.display = 'block';
+    confirmField.style.display = 'block';
+    newLabel.textContent = 'Sandi Baru';
+    submitBtn.textContent = 'Simpan Sandi Baru';
+    submitBtn.classList.remove('danger');
+  }
+
+  modal.classList.add('open');
+  setTimeout(() => {
+    const focusTarget = mode === 'change' ? document.getElementById('input-auth-old') : document.getElementById('input-auth-new');
+    if (focusTarget) focusTarget.focus();
+  }, 100);
+}
+
+function setupAuthModal() {
+  const modal = document.getElementById('modal-delete-password');
+  if (!modal) return;
+  const closeBtn = document.getElementById('btn-close-auth-modal');
+  const submitBtn = document.getElementById('btn-auth-submit');
+  const errorMsg = document.getElementById('auth-error-msg');
+
+  closeBtn.addEventListener('click', () => {
+    modal.classList.remove('open');
+  });
+
+  submitBtn.addEventListener('click', async () => {
+    errorMsg.style.display = 'none';
+    const oldVal = document.getElementById('input-auth-old').value;
+    const newVal = document.getElementById('input-auth-new').value;
+    const confirmVal = document.getElementById('input-auth-confirm').value;
+
+    if (currentAuthMode === 'setup') {
+      if (!newVal.trim()) {
+        errorMsg.textContent = 'Sandi tidak boleh kosong';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      if (newVal !== confirmVal) {
+        errorMsg.textContent = 'Konfirmasi sandi tidak cocok';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      const hash = await sha256Hex(newVal);
+      setDeletePasswordHash(hash);
+      modal.classList.remove('open');
+      if (typeof onAuthSuccessCallback === 'function') onAuthSuccessCallback();
+    } else if (currentAuthMode === 'verify') {
+      const isValid = await verifyDeletePassword(newVal);
+      if (isValid) {
+        modal.classList.remove('open');
+        if (typeof onAuthSuccessCallback === 'function') onAuthSuccessCallback();
+      } else {
+        errorMsg.textContent = 'Sandi salah! Periksa kembali.';
+        errorMsg.style.display = 'block';
+      }
+    } else if (currentAuthMode === 'change') {
+      const isOldValid = await verifyDeletePassword(oldVal);
+      if (!isOldValid) {
+        errorMsg.textContent = 'Sandi lama tidak sesuai';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      if (!newVal.trim()) {
+        errorMsg.textContent = 'Sandi baru tidak boleh kosong';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      if (newVal !== confirmVal) {
+        errorMsg.textContent = 'Konfirmasi sandi baru tidak cocok';
+        errorMsg.style.display = 'block';
+        return;
+      }
+      const newHash = await sha256Hex(newVal);
+      setDeletePasswordHash(newHash);
+      modal.classList.remove('open');
+      showToast({
+        type: 'success',
+        title: 'Sandi Diperbarui',
+        message: 'Sandi rahasia berhasil diubah'
+      });
+    }
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.remove('open');
+  });
+}
+
+// ==========================================================================
 // TAB 4: SETTINGS VIEW
 // ==========================================================================
 function setupSettingsTab() {
@@ -1639,20 +1892,65 @@ function setupSettingsTab() {
     }
   });
 
+  // Ubah Sandi Rahasia
+  const changePassRow = document.getElementById('row-change-password');
+  if (changePassRow) {
+    changePassRow.addEventListener('click', () => {
+      triggerHaptic();
+      openAuthModal('change');
+    });
+  }
+
+  // Bersihkan Semua Data dengan Proteksi Sandi
   document.getElementById('btn-reset-data').addEventListener('click', () => {
     triggerHaptic();
-    const confirmed = confirm('Apakah kamu yakin ingin menghapus SEMUA catatan pengeluaran secara permanen?');
-    if (confirmed) {
-      state.expenses = [];
-      saveData();
-      renderAll();
-      alert('Semua data berhasil dibersihkan.');
+    if (!hasDeletePassword()) {
+      openAuthModal('setup', () => {
+        showConfirmModal({
+          icon: '⚠️',
+          title: 'Hapus Semua Data?',
+          message: 'Sandi tersimpan. Apakah kamu yakin ingin menghapus SELURUH catatan transaksi secara permanen?',
+          confirmText: 'Hapus Permanen',
+          isDanger: true,
+          onConfirm: () => {
+            state.expenses = [];
+            saveData();
+            renderAll();
+            showToast({
+              type: 'danger',
+              title: 'Data Dibersihkan',
+              message: 'Semua riwayat transaksi telah dihapus'
+            });
+          }
+        });
+      });
+    } else {
+      openAuthModal('verify', () => {
+        showConfirmModal({
+          icon: '⚠️',
+          title: 'Hapus Semua Data?',
+          message: 'Sandi terverifikasi. Apakah kamu yakin ingin menghapus SELURUH catatan transaksi secara permanen?',
+          confirmText: 'Hapus Permanen',
+          isDanger: true,
+          onConfirm: () => {
+            state.expenses = [];
+            saveData();
+            renderAll();
+            showToast({
+              type: 'danger',
+              title: 'Data Dibersihkan',
+              message: 'Semua riwayat transaksi telah dihapus'
+            });
+          }
+        });
+      });
     }
   });
 }
 
 function renderSettingsView() {
   document.getElementById('settings-total-records').textContent = `${state.expenses.length} transaksi`;
+  updatePasswordRowVisibility();
 }
 
 // ==========================================================================
@@ -1770,27 +2068,35 @@ function saveNewExpense() {
   const cat = state.addCategory || state.categories[0];
   const icon = cat ? (cat.icon || resolveCategoryIconName(cat)) : 'sparkles';
 
-  const newExpense = {
-    id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-    amount: amt,
-    note: note,
-    timestamp: state.addDate.toISOString(),
-    categoryId: cat ? cat.id : 'cat_other',
-    categoryName: cat ? cat.name : 'Lainnya',
-    categoryIcon: icon
-  };
+  showConfirmModal({
+    icon: '📝',
+    title: 'Catat Pengeluaran?',
+    message: `Catat pengeluaran sebesar ${formatRupiah(amt)} untuk kategori "${cat ? cat.name : 'Lainnya'}"?`,
+    confirmText: 'Simpan',
+    onConfirm: () => {
+      const newExpense = {
+        id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        amount: amt,
+        note: note,
+        timestamp: state.addDate.toISOString(),
+        categoryId: cat ? cat.id : 'cat_other',
+        categoryName: cat ? cat.name : 'Lainnya',
+        categoryIcon: icon
+      };
 
-  state.expenses.unshift(newExpense);
-  saveData();
+      state.expenses.unshift(newExpense);
+      saveData();
 
-  document.getElementById('modal-add-expense').classList.remove('open');
-  triggerHaptic();
-  renderAll();
+      document.getElementById('modal-add-expense').classList.remove('open');
+      triggerHaptic();
+      renderAll();
 
-  showToast({
-    type: 'success',
-    title: 'Pengeluaran Dicatat',
-    message: `${newExpense.note || newExpense.categoryName} • ${formatRupiah(newExpense.amount)}`
+      showToast({
+        type: 'success',
+        title: 'Pengeluaran Dicatat',
+        message: `${newExpense.note || newExpense.categoryName} • ${formatRupiah(newExpense.amount)}`
+      });
+    }
   });
 }
 
@@ -1870,18 +2176,24 @@ function setupEditExpenseModal() {
 
   deleteBtn.addEventListener('click', () => {
     triggerHaptic();
-    const confirmed = confirm('Hapus catatan transaksi ini?');
-    if (confirmed) {
-      state.expenses = state.expenses.filter((e) => e.id !== state.editingExpenseId);
-      saveData();
-      modal.classList.remove('open');
-      renderAll();
-      showToast({
-        type: 'danger',
-        title: 'Catatan Dihapus',
-        message: 'Transaksi berhasil dihapus dari jurnal'
-      });
-    }
+    showConfirmModal({
+      icon: '🗑️',
+      title: 'Hapus Catatan?',
+      message: 'Apakah kamu yakin ingin menghapus catatan transaksi ini secara permanen?',
+      confirmText: 'Hapus',
+      isDanger: true,
+      onConfirm: () => {
+        state.expenses = state.expenses.filter((e) => e.id !== state.editingExpenseId);
+        saveData();
+        modal.classList.remove('open');
+        renderAll();
+        showToast({
+          type: 'danger',
+          title: 'Catatan Dihapus',
+          message: 'Transaksi berhasil dihapus dari jurnal'
+        });
+      }
+    });
   });
 }
 
@@ -1917,6 +2229,16 @@ function openEditModal(exp) {
 
   document.getElementById('edit-note-input').value = exp.note || '';
   document.getElementById('edit-date-label').textContent = formatRelativeDate(state.editDate);
+
+  const infoEl = document.getElementById('edit-timestamp-info');
+  if (infoEl) {
+    if (exp.updatedAt) {
+      infoEl.textContent = `Terakhir diedit: ${formatEditedTime(exp.updatedAt)}`;
+      infoEl.style.display = 'block';
+    } else {
+      infoEl.style.display = 'none';
+    }
+  }
 
   const iconPickerGrid = document.getElementById('edit-icon-picker-grid');
   if (iconPickerGrid) iconPickerGrid.style.display = 'none';
@@ -1966,35 +2288,44 @@ function saveEditedExpense() {
   const cat = state.editCategory || state.categories[0];
   const finalIcon = state.editCustomIcon || (cat ? (cat.icon || resolveCategoryIconName(cat)) : 'sparkles');
 
-  const idx = state.expenses.findIndex((e) => e.id === state.editingExpenseId);
-  if (idx !== -1) {
-    const existing = state.expenses[idx];
-    state.expenses[idx] = {
-      ...existing,
-      amount: amt,
-      note: note,
-      timestamp: state.editDate.toISOString(),
-      categoryId: cat ? cat.id : 'cat_other',
-      categoryName: cat ? cat.name : 'Lainnya',
-      categoryIcon: finalIcon
-    };
-    delete state.expenses[idx].categoryEmoji;
-    delete state.expenses[idx].emoji;
+  showConfirmModal({
+    icon: '✏️',
+    title: 'Simpan Perubahan?',
+    message: 'Apakah kamu yakin ingin menyimpan perubahan pada transaksi ini?',
+    confirmText: 'Simpan',
+    onConfirm: () => {
+      const idx = state.expenses.findIndex((e) => e.id === state.editingExpenseId);
+      if (idx !== -1) {
+        const existing = state.expenses[idx];
+        state.expenses[idx] = {
+          ...existing,
+          amount: amt,
+          note: note,
+          timestamp: state.editDate.toISOString(),
+          categoryId: cat ? cat.id : 'cat_other',
+          categoryName: cat ? cat.name : 'Lainnya',
+          categoryIcon: finalIcon,
+          updatedAt: new Date().toISOString()
+        };
+        delete state.expenses[idx].categoryEmoji;
+        delete state.expenses[idx].emoji;
 
-    saveData();
-  }
+        saveData();
+      }
 
-  document.getElementById('modal-edit-expense').classList.remove('open');
-  const grid = document.getElementById('edit-icon-picker-grid');
-  if (grid) grid.style.display = 'none';
+      document.getElementById('modal-edit-expense').classList.remove('open');
+      const grid = document.getElementById('edit-icon-picker-grid');
+      if (grid) grid.style.display = 'none';
 
-  triggerHaptic();
-  renderAll();
+      triggerHaptic();
+      renderAll();
 
-  showToast({
-    type: 'info',
-    title: 'Perubahan Disimpan',
-    message: `${cat.name}${note ? ' • ' + note : ''} • ${formatRupiah(amt)}`
+      showToast({
+        type: 'info',
+        title: 'Perubahan Disimpan',
+        message: `${cat.name}${note ? ' • ' + note : ''} • ${formatRupiah(amt)}`
+      });
+    }
   });
 }
 

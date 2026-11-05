@@ -21,10 +21,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -51,6 +53,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
@@ -71,6 +75,7 @@ fun SettingsScreen(
     cloudUrl: String,
     isAutoSyncEnabled: Boolean,
     lastSyncStatus: String,
+    hasDeletePassword: Boolean,
     onSaveCloudUrl: (String) -> Unit,
     onToggleAutoSync: (Boolean) -> Unit,
     onTestConnection: (String) -> Unit,
@@ -78,13 +83,27 @@ fun SettingsScreen(
     onExportJson: suspend () -> String,
     onImportJson: (String) -> Unit,
     onSyncServer: (serverAddress: String) -> Unit,
+    onSetDeletePassword: (String) -> Unit,
+    onVerifyDeletePassword: (String) -> Boolean,
+    onChangeDeletePassword: (String, String) -> Boolean,
     onResetData: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var serverAddress by remember(cloudUrl) { mutableStateOf(cloudUrl) }
-    var showResetDialog by remember { mutableStateOf(false) }
+    var showSetPasswordDialog by remember { mutableStateOf(false) }
+    var showVerifyPasswordDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var showFinalConfirmResetDialog by remember { mutableStateOf(false) }
+
+    var newPasswordInput by remember { mutableStateOf("") }
+    var confirmPasswordInput by remember { mutableStateOf("") }
+    var verifyPasswordInput by remember { mutableStateOf("") }
+    var oldPasswordInput by remember { mutableStateOf("") }
+    var changeNewPassInput by remember { mutableStateOf("") }
+    var changeConfirmPassInput by remember { mutableStateOf("") }
+    var passwordErrorMsg by remember { mutableStateOf<String?>(null) }
 
     // Import file picker
     val importLauncher = rememberLauncherForActivityResult(
@@ -422,12 +441,47 @@ fun SettingsScreen(
                         color = StoneMuted
                     )
                     Spacer(modifier = Modifier.height(10.dp))
-                    Button(
-                        onClick = { showResetDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = DangerRed.copy(alpha = 0.1f)),
-                        shape = RoundedCornerShape(10.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("Bersihkan Semua Data", color = DangerRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = {
+                                passwordErrorMsg = null
+                                if (!hasDeletePassword) {
+                                    newPasswordInput = ""
+                                    confirmPasswordInput = ""
+                                    showSetPasswordDialog = true
+                                } else {
+                                    verifyPasswordInput = ""
+                                    showVerifyPasswordDialog = true
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = DangerRed.copy(alpha = 0.1f)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Bersihkan Semua Data", color = DangerRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        if (hasDeletePassword) {
+                            Button(
+                                onClick = {
+                                    oldPasswordInput = ""
+                                    changeNewPassInput = ""
+                                    changeConfirmPassInput = ""
+                                    passwordErrorMsg = null
+                                    showChangePasswordDialog = true
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = CardSurface),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, BorderBeige),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = CharcoalInk, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Ubah Sandi", color = CharcoalInk, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
@@ -436,21 +490,247 @@ fun SettingsScreen(
         item { Spacer(modifier = Modifier.height(40.dp)) }
     }
 
-    if (showResetDialog) {
+    // Dialog 1: Buat Password Baru (Pertama kali)
+    if (showSetPasswordDialog) {
         AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = { Text("Bersihkan Data?", fontWeight = FontWeight.Bold) },
-            text = { Text("Apakah kamu yakin ingin menghapus SELURUH catatan transaksi secara permanen?") },
+            onDismissRequest = { showSetPasswordDialog = false },
+            title = { Text("Buat Sandi Rahasia", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Untuk keamanan, tentukan sandi atau pesan rahasia yang hanya kamu ketahui sebelum menghapus data.",
+                        fontSize = 13.sp,
+                        color = StoneMuted
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = newPasswordInput,
+                        onValueChange = {
+                            newPasswordInput = it
+                            passwordErrorMsg = null
+                        },
+                        label = { Text("Sandi Rahasia Baru") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TerracottaPrimary,
+                            unfocusedBorderColor = BorderBeige
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = confirmPasswordInput,
+                        onValueChange = {
+                            confirmPasswordInput = it
+                            passwordErrorMsg = null
+                        },
+                        label = { Text("Ulangi Sandi") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TerracottaPrimary,
+                            unfocusedBorderColor = BorderBeige
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (passwordErrorMsg != null) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(passwordErrorMsg ?: "", color = DangerRed, fontSize = 12.sp)
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    showResetDialog = false
+                    if (newPasswordInput.isBlank()) {
+                        passwordErrorMsg = "Sandi tidak boleh kosong"
+                    } else if (newPasswordInput != confirmPasswordInput) {
+                        passwordErrorMsg = "Konfirmasi sandi tidak cocok"
+                    } else {
+                        onSetDeletePassword(newPasswordInput)
+                        showSetPasswordDialog = false
+                        showFinalConfirmResetDialog = true
+                    }
+                }) {
+                    Text("Simpan & Lanjut", color = TerracottaPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSetPasswordDialog = false }) {
+                    Text("Batal", color = CharcoalInk)
+                }
+            }
+        )
+    }
+
+    // Dialog 2: Masukkan Password untuk Verifikasi
+    if (showVerifyPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { showVerifyPasswordDialog = false },
+            title = { Text("Autentikasi Sandi", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Masukkan sandi rahasia untuk memverifikasi penghapusan seluruh data transaksi.",
+                        fontSize = 13.sp,
+                        color = StoneMuted
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = verifyPasswordInput,
+                        onValueChange = {
+                            verifyPasswordInput = it
+                            passwordErrorMsg = null
+                        },
+                        label = { Text("Sandi Rahasia") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TerracottaPrimary,
+                            unfocusedBorderColor = BorderBeige
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (passwordErrorMsg != null) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(passwordErrorMsg ?: "", color = DangerRed, fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (onVerifyDeletePassword(verifyPasswordInput)) {
+                        showVerifyPasswordDialog = false
+                        showFinalConfirmResetDialog = true
+                    } else {
+                        passwordErrorMsg = "Sandi salah! Periksa kembali."
+                    }
+                }) {
+                    Text("Verifikasi", color = DangerRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showVerifyPasswordDialog = false }) {
+                    Text("Batal", color = CharcoalInk)
+                }
+            }
+        )
+    }
+
+    // Dialog 3: Ubah Sandi Rahasia
+    if (showChangePasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { showChangePasswordDialog = false },
+            title = { Text("Ubah Sandi Rahasia", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = oldPasswordInput,
+                        onValueChange = {
+                            oldPasswordInput = it
+                            passwordErrorMsg = null
+                        },
+                        label = { Text("Sandi Lama") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TerracottaPrimary,
+                            unfocusedBorderColor = BorderBeige
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = changeNewPassInput,
+                        onValueChange = {
+                            changeNewPassInput = it
+                            passwordErrorMsg = null
+                        },
+                        label = { Text("Sandi Baru") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TerracottaPrimary,
+                            unfocusedBorderColor = BorderBeige
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = changeConfirmPassInput,
+                        onValueChange = {
+                            changeConfirmPassInput = it
+                            passwordErrorMsg = null
+                        },
+                        label = { Text("Ulangi Sandi Baru") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TerracottaPrimary,
+                            unfocusedBorderColor = BorderBeige
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (passwordErrorMsg != null) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(passwordErrorMsg ?: "", color = DangerRed, fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (changeNewPassInput.isBlank()) {
+                        passwordErrorMsg = "Sandi baru tidak boleh kosong"
+                    } else if (changeNewPassInput != changeConfirmPassInput) {
+                        passwordErrorMsg = "Konfirmasi sandi baru tidak cocok"
+                    } else {
+                        val success = onChangeDeletePassword(oldPasswordInput, changeNewPassInput)
+                        if (success) {
+                            showChangePasswordDialog = false
+                        } else {
+                            passwordErrorMsg = "Sandi lama tidak sesuai"
+                        }
+                    }
+                }) {
+                    Text("Simpan", color = TerracottaPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChangePasswordDialog = false }) {
+                    Text("Batal", color = CharcoalInk)
+                }
+            }
+        )
+    }
+
+    // Dialog 4: Konfirmasi Akhir Hapus Semua Data
+    if (showFinalConfirmResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showFinalConfirmResetDialog = false },
+            title = { Text("Hapus Semua Data?", fontWeight = FontWeight.Bold) },
+            text = { Text("Sandi terverifikasi. Apakah kamu yakin ingin menghapus SELURUH catatan transaksi secara permanen?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showFinalConfirmResetDialog = false
                     onResetData()
                 }) {
                     Text("Hapus Permanen", color = DangerRed, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
+                TextButton(onClick = { showFinalConfirmResetDialog = false }) {
                     Text("Batal", color = CharcoalInk)
                 }
             }

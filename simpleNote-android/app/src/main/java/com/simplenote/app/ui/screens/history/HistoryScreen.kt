@@ -76,19 +76,17 @@ fun HistoryScreen(
         val targetMonth = cal.get(Calendar.MONTH)
 
         expenses.filter { exp ->
-            try {
-                val d = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(exp.timestamp.take(19))
-                if (d != null) {
-                    val c = Calendar.getInstance().apply { time = d }
-                    val inMonth = c.get(Calendar.YEAR) == targetYear && c.get(Calendar.MONTH) == targetMonth
-                    val matchesSearch = searchQuery.isBlank() ||
-                            exp.note.contains(searchQuery, ignoreCase = true) ||
-                            exp.categoryName.contains(searchQuery, ignoreCase = true)
-                    val matchesCat = selectedCategoryFilter == null || exp.categoryId == selectedCategoryFilter?.id
+            val d = exp.parsedDate()
+            if (d != null) {
+                val c = Calendar.getInstance().apply { time = d }
+                val inMonth = c.get(Calendar.YEAR) == targetYear && c.get(Calendar.MONTH) == targetMonth
+                val matchesSearch = searchQuery.isBlank() ||
+                        exp.note.contains(searchQuery, ignoreCase = true) ||
+                        exp.categoryName.contains(searchQuery, ignoreCase = true)
+                val matchesCat = selectedCategoryFilter == null || exp.categoryId == selectedCategoryFilter?.id
 
-                    inMonth && matchesSearch && matchesCat
-                } else false
-            } catch (e: Exception) { false }
+                inMonth && matchesSearch && matchesCat
+            } else false
         }
     }
 

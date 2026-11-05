@@ -207,6 +207,27 @@ class MainViewModel(
         }
     }
 
+    fun hasDeletePassword(): Boolean = repository.cloudPreferences.hasDeletePassword()
+
+    fun setDeletePassword(plainText: String) {
+        repository.cloudPreferences.setDeletePassword(plainText)
+    }
+
+    fun verifyDeletePassword(plainText: String): Boolean {
+        return repository.cloudPreferences.verifyDeletePassword(plainText)
+    }
+
+    fun changeDeletePassword(oldPass: String, newPass: String): Boolean {
+        if (verifyDeletePassword(oldPass)) {
+            setDeletePassword(newPass)
+            showToast(ToastType.SUCCESS, "Password Diperbarui", "Password rahasia berhasil diubah")
+            return true
+        } else {
+            showToast(ToastType.DANGER, "Gagal Ubah Password", "Password lama tidak sesuai")
+            return false
+        }
+    }
+
     fun clearAllData() {
         viewModelScope.launch {
             repository.deleteAllExpenses()

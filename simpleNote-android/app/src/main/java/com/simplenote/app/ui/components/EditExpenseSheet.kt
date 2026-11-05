@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,6 +25,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +49,10 @@ import com.simplenote.app.ui.theme.DangerRed
 import com.simplenote.app.ui.theme.PaperBackground
 import com.simplenote.app.ui.theme.StoneMuted
 import com.simplenote.app.ui.theme.TerracottaPrimary
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +74,30 @@ fun EditExpenseSheet(
     }
     var selectedIcon by remember { mutableStateOf(expense.categoryIcon) }
     var note by remember { mutableStateOf(expense.note) }
+    var showConfirmDeleteDialog by remember { mutableStateOf(false) }
+    var showConfirmSaveDialog by remember { mutableStateOf(false) }
+
+    val createdTimeString = remember(expense.timestamp) {
+        try {
+            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
+            val d = parser.parse(expense.timestamp.take(19))
+            if (d != null) SimpleDateFormat("d MMM yyyy, HH:mm", Locale("id", "ID")).format(d) else ""
+        } catch (e: Exception) { "" }
+    }
+
+    val updatedTimeString = remember(expense.updatedAt) {
+        expense.updatedAt?.let {
+            try {
+                val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+                val d = parser.parse(it.take(19))
+                if (d != null) SimpleDateFormat("d MMM yyyy, HH:mm", Locale("id", "ID")).format(d) else null
+            } catch (e: Exception) { null }
+        }
+    }
 
     val amountLong = amountString.toLongOrNull() ?: 0L
     val isFormValid = amountLong > 0
@@ -100,12 +130,29 @@ fun EditExpenseSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Ubah Catatan",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CharcoalInk
-                )
+                Column {
+                    Text(
+                        text = "Ubah Catatan",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CharcoalInk
+                    )
+                    if (createdTimeString.isNotBlank()) {
+                        Text(
+                            text = "Dibuat: $createdTimeString",
+                            fontSize = 11.sp,
+                            color = StoneMuted
+                        )
+                    }
+                    if (updatedTimeString != null) {
+                        Text(
+                            text = "Diedit: $updatedTimeString",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TerracottaPrimary
+                        )
+                    }
+                }
                 Text(
                     text = "Batal",
                     fontSize = 14.sp,
@@ -216,7 +263,7 @@ fun EditExpenseSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedButton(
-                    onClick = { onDeleteExpense(expense) },
+                    onClick = { showConfirmDeleteDialog = true },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = DangerRed),
                     border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(DangerRed)),
                     shape = RoundedCornerShape(14.dp),
@@ -230,14 +277,7 @@ fun EditExpenseSheet(
                 Button(
                     onClick = {
                         if (isFormValid) {
-                            val updated = expense.copy(
-                                amount = amountLong,
-                                categoryId = selectedCategory.id,
-                                categoryName = selectedCategory.name,
-                                categoryIcon = selectedIcon,
-                                note = note.trim()
-                            )
-                            onSaveEdit(updated)
+                            showConfirmSaveDialog = true
                         }
                     },
                     enabled = isFormValid,
@@ -254,5 +294,61 @@ fun EditExpenseSheet(
                 }
             }
         }
+    }
+
+    // Dialog Konfirmasi Simpan Perubahan
+    if (showConfirmSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmSaveDialog = false },
+            title = { Text("Simpan Perubahan?", fontWeight = FontWeight.Bold) },
+            text = { Text("Apakah kamu yakin ingin menyimpan perubahan pada transaksi ini?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirmSaveDialog = false
+                    val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+                        timeZone = TimeZone.getTimeZone("UTC")
+                    }
+                    val nowIso = sdf.format(Date())
+                    val updated = expense.copy(
+                        amount = amountLong,
+                        categoryId = selectedCategory.id,
+                        categoryName = selectedCategory.name,
+                        categoryIcon = selectedIcon,
+                        note = note.trim(),
+                        updatedAt = nowIso
+                    )
+                    onSaveEdit(updated)
+                }) {
+                    Text("Simpan", color = TerracottaPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmSaveDialog = false }) {
+                    Text("Batal", color = CharcoalInk)
+                }
+            }
+        )
+    }
+
+    // Dialog Konfirmasi Hapus Transaksi
+    if (showConfirmDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDeleteDialog = false },
+            title = { Text("Hapus Catatan?", fontWeight = FontWeight.Bold) },
+            text = { Text("Apakah kamu yakin ingin menghapus catatan transaksi ini secara permanen?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirmDeleteDialog = false
+                    onDeleteExpense(expense)
+                }) {
+                    Text("Hapus", color = DangerRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDeleteDialog = false }) {
+                    Text("Batal", color = CharcoalInk)
+                }
+            }
+        )
     }
 }
