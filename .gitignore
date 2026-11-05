@@ -12,16 +12,14 @@ Thumbs.db
 
 # Android & Gradle Build Artifacts
 .gradle/
-android/.gradle/
-android/app/build/
-android/.kotlin/
+simpleNote-android/.gradle/
+simpleNote-android/app/build/
+simpleNote-android/.kotlin/
 local.properties
-android/local.properties
+simpleNote-android/local.properties
 captures/
 *.apk
 *.aab
-!android/app/build/outputs/apk/debug/app-debug.apk
-!web/app-debug.apk
 
 # Node
 node_modules/
