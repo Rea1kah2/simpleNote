@@ -35,11 +35,11 @@
     },
     {
       "source": "/",
-      "destination": "/web/index.html"
+      "destination": "/simpleNote-ios/index.html"
     },
     {
       "source": "/((?!api/).*)",
-      "destination": "/web/$1"
+      "destination": "/simpleNote-ios/$1"
     }
   ]
 }

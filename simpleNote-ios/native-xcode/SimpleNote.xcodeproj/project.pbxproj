@@ -1,0 +1,448 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9B0010012CE0000100000001 /* SimpleNoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020012CE0000100000001 /* SimpleNoteApp.swift */; };
+		9B0010022CE0000100000001 /* ExpenseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020022CE0000100000001 /* ExpenseStore.swift */; };
+		9B0010032CE0000100000001 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020032CE0000100000001 /* MainTabView.swift */; };
+		9B0010042CE0000100000001 /* Expense.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020042CE0000100000001 /* Expense.swift */; };
+		9B0010052CE0000100000001 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020052CE0000100000001 /* Category.swift */; };
+		9B0010062CE0000100000001 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020062CE0000100000001 /* TodayView.swift */; };
+		9B0010072CE0000100000001 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020072CE0000100000001 /* TodayViewModel.swift */; };
+		9B0010082CE0000100000001 /* AddExpenseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020082CE0000100000001 /* AddExpenseSheet.swift */; };
+		9B0010092CE0000100000001 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020092CE0000100000001 /* HistoryView.swift */; };
+		9B00100A2CE0000100000001 /* HistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B00200A2CE0000100000001 /* HistoryViewModel.swift */; };
+		9B00100B2CE0000100000001 /* CalendarGridComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B00200B2CE0000100000001 /* CalendarGridComponent.swift */; };
+		9B00100C2CE0000100000001 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B00200C2CE0000100000001 /* StatsView.swift */; };
+		9B00100D2CE0000100000001 /* StatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B00200D2CE0000100000001 /* StatsViewModel.swift */; };
+		9B00100E2CE0000100000001 /* CategoryDonutChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B00200E2CE0000100000001 /* CategoryDonutChart.swift */; };
+		9B00100F2CE0000100000001 /* DailyTrendBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B00200F2CE0000100000001 /* DailyTrendBarChart.swift */; };
+		9B0010102CE0000100000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020102CE0000100000001 /* SettingsView.swift */; };
+		9B0010112CE0000100000001 /* CategoryManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020112CE0000100000001 /* CategoryManagerView.swift */; };
+		9B0010122CE0000100000001 /* ExpenseRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020122CE0000100000001 /* ExpenseRow.swift */; };
+		9B0010132CE0000100000001 /* CategoryChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020132CE0000100000001 /* CategoryChip.swift */; };
+		9B0010142CE0000100000001 /* NumericKeypadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020142CE0000100000001 /* NumericKeypadView.swift */; };
+		9B0010152CE0000100000001 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020152CE0000100000001 /* EmptyStateView.swift */; };
+		9B0010162CE0000100000001 /* Date+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020162CE0000100000001 /* Date+Extensions.swift */; };
+		9B0010172CE0000100000001 /* Double+Currency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020172CE0000100000001 /* Double+Currency.swift */; };
+		9B0010182CE0000100000001 /* ColorTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020182CE0000100000001 /* ColorTokens.swift */; };
+		9B0010192CE0000100000001 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0020192CE0000100000001 /* Typography.swift */; };
+		9B00101A2CE0000100000001 /* EditExpenseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B00201A2CE0000100000001 /* EditExpenseSheet.swift */; };
+		9B00101B2CE0000100000001 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B00201B2CE0000100000001 /* NotificationManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		9B0000012CE0000100000001 /* SimpleNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9B0020012CE0000100000001 /* SimpleNoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleNoteApp.swift; sourceTree = "<group>"; };
+		9B0020022CE0000100000001 /* ExpenseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseStore.swift; sourceTree = "<group>"; };
+		9B0020032CE0000100000001 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		9B0020042CE0000100000001 /* Expense.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Expense.swift; sourceTree = "<group>"; };
+		9B0020052CE0000100000001 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
+		9B0020062CE0000100000001 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		9B0020072CE0000100000001 /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewModel.swift; sourceTree = "<group>"; };
+		9B0020082CE0000100000001 /* AddExpenseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExpenseSheet.swift; sourceTree = "<group>"; };
+		9B0020092CE0000100000001 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		9B00200A2CE0000100000001 /* HistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModel.swift; sourceTree = "<group>"; };
+		9B00200B2CE0000100000001 /* CalendarGridComponent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarGridComponent.swift; sourceTree = "<group>"; };
+		9B00200C2CE0000100000001 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
+		9B00200D2CE0000100000001 /* StatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsViewModel.swift; sourceTree = "<group>"; };
+		9B00200E2CE0000100000001 /* CategoryDonutChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryDonutChart.swift; sourceTree = "<group>"; };
+		9B00200F2CE0000100000001 /* DailyTrendBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTrendBarChart.swift; sourceTree = "<group>"; };
+		9B0020102CE0000100000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		9B0020112CE0000100000001 /* CategoryManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryManagerView.swift; sourceTree = "<group>"; };
+		9B0020122CE0000100000001 /* ExpenseRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseRow.swift; sourceTree = "<group>"; };
+		9B0020132CE0000100000001 /* CategoryChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryChip.swift; sourceTree = "<group>"; };
+		9B0020142CE0000100000001 /* NumericKeypadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumericKeypadView.swift; sourceTree = "<group>"; };
+		9B0020152CE0000100000001 /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
+		9B0020162CE0000100000001 /* Date+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Extensions.swift"; sourceTree = "<group>"; };
+		9B0020172CE0000100000001 /* Double+Currency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Double+Currency.swift"; sourceTree = "<group>"; };
+		9B0020182CE0000100000001 /* ColorTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorTokens.swift; sourceTree = "<group>"; };
+		9B0020192CE0000100000001 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		9B00201A2CE0000100000001 /* EditExpenseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditExpenseSheet.swift; sourceTree = "<group>"; };
+		9B00201B2CE0000100000001 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9B0030012CE0000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9B0040002CE0000100000001 = {
+			isa = PBXGroup;
+			children = (
+				9B0040012CE0000100000001 /* SimpleNote */,
+				9B0040092CE0000100000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9B0040012CE0000100000001 /* SimpleNote */ = {
+			isa = PBXGroup;
+			children = (
+				9B0040022CE0000100000001 /* App */,
+				9B0040032CE0000100000001 /* Models */,
+				9B0040042CE0000100000001 /* Features */,
+				9B0040052CE0000100000001 /* Shared */,
+			);
+			path = SimpleNote;
+			sourceTree = "<group>";
+		};
+		9B0040022CE0000100000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				9B0020012CE0000100000001 /* SimpleNoteApp.swift */,
+				9B0020022CE0000100000001 /* ExpenseStore.swift */,
+				9B0020032CE0000100000001 /* MainTabView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		9B0040032CE0000100000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				9B0020042CE0000100000001 /* Expense.swift */,
+				9B0020052CE0000100000001 /* Category.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		9B0040042CE0000100000001 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				9B0040062CE0000100000001 /* Today */,
+				9B0040072CE0000100000001 /* History */,
+				9B0040082CE0000100000001 /* Stats */,
+				9B0040112CE0000100000001 /* Settings */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		9B0040052CE0000100000001 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				9B00201B2CE0000100000001 /* NotificationManager.swift */,
+				9B0040122CE0000100000001 /* Components */,
+				9B0040132CE0000100000001 /* Extensions */,
+				9B0040142CE0000100000001 /* Theme */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		9B0040062CE0000100000001 /* Today */ = {
+			isa = PBXGroup;
+			children = (
+				9B0020062CE0000100000001 /* TodayView.swift */,
+				9B0020072CE0000100000001 /* TodayViewModel.swift */,
+				9B0020082CE0000100000001 /* AddExpenseSheet.swift */,
+				9B00201A2CE0000100000001 /* EditExpenseSheet.swift */,
+			);
+			path = Today;
+			sourceTree = "<group>";
+		};
+		9B0040072CE0000100000001 /* History */ = {
+			isa = PBXGroup;
+			children = (
+				9B0020092CE0000100000001 /* HistoryView.swift */,
+				9B00200A2CE0000100000001 /* HistoryViewModel.swift */,
+				9B00200B2CE0000100000001 /* CalendarGridComponent.swift */,
+			);
+			path = History;
+			sourceTree = "<group>";
+		};
+		9B0040082CE0000100000001 /* Stats */ = {
+			isa = PBXGroup;
+			children = (
+				9B00200C2CE0000100000001 /* StatsView.swift */,
+				9B00200D2CE0000100000001 /* StatsViewModel.swift */,
+				9B0040102CE0000100000001 /* Charts */,
+			);
+			path = Stats;
+			sourceTree = "<group>";
+		};
+		9B0040102CE0000100000001 /* Charts */ = {
+			isa = PBXGroup;
+			children = (
+				9B00200E2CE0000100000001 /* CategoryDonutChart.swift */,
+				9B00200F2CE0000100000001 /* DailyTrendBarChart.swift */,
+			);
+			path = Charts;
+			sourceTree = "<group>";
+		};
+		9B0040112CE0000100000001 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				9B0020102CE0000100000001 /* SettingsView.swift */,
+				9B0020112CE0000100000001 /* CategoryManagerView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		9B0040122CE0000100000001 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				9B0020122CE0000100000001 /* ExpenseRow.swift */,
+				9B0020132CE0000100000001 /* CategoryChip.swift */,
+				9B0020142CE0000100000001 /* NumericKeypadView.swift */,
+				9B0020152CE0000100000001 /* EmptyStateView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		9B0040132CE0000100000001 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				9B0020162CE0000100000001 /* Date+Extensions.swift */,
+				9B0020172CE0000100000001 /* Double+Currency.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		9B0040142CE0000100000001 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				9B0020182CE0000100000001 /* ColorTokens.swift */,
+				9B0020192CE0000100000001 /* Typography.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		9B0040092CE0000100000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9B0000012CE0000100000001 /* SimpleNote.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9B0050012CE0000100000001 /* SimpleNote */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9B0060012CE0000100000001 /* Build configuration list for PBXNativeTarget "SimpleNote" */;
+			buildPhases = (
+				9B0070012CE0000100000001 /* Sources */,
+				9B0030012CE0000100000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SimpleNote;
+			productName = SimpleNote;
+			productReference = 9B0000012CE0000100000001 /* SimpleNote.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9B0000002CE0000100000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					9B0050012CE0000100000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 9B0060002CE0000100000001 /* Build configuration list for PBXProject "SimpleNote" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9B0040002CE0000100000001;
+			productRefGroup = 9B0040092CE0000100000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9B0050012CE0000100000001 /* SimpleNote */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9B0070012CE0000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B0010012CE0000100000001 /* SimpleNoteApp.swift in Sources */,
+				9B0010022CE0000100000001 /* ExpenseStore.swift in Sources */,
+				9B0010032CE0000100000001 /* MainTabView.swift in Sources */,
+				9B0010042CE0000100000001 /* Expense.swift in Sources */,
+				9B0010052CE0000100000001 /* Category.swift in Sources */,
+				9B0010062CE0000100000001 /* TodayView.swift in Sources */,
+				9B0010072CE0000100000001 /* TodayViewModel.swift in Sources */,
+				9B0010082CE0000100000001 /* AddExpenseSheet.swift in Sources */,
+				9B0010092CE0000100000001 /* HistoryView.swift in Sources */,
+				9B00100A2CE0000100000001 /* HistoryViewModel.swift in Sources */,
+				9B00100B2CE0000100000001 /* CalendarGridComponent.swift in Sources */,
+				9B00100C2CE0000100000001 /* StatsView.swift in Sources */,
+				9B00100D2CE0000100000001 /* StatsViewModel.swift in Sources */,
+				9B00100E2CE0000100000001 /* CategoryDonutChart.swift in Sources */,
+				9B00100F2CE0000100000001 /* DailyTrendBarChart.swift in Sources */,
+				9B0010102CE0000100000001 /* SettingsView.swift in Sources */,
+				9B0010112CE0000100000001 /* CategoryManagerView.swift in Sources */,
+				9B0010122CE0000100000001 /* ExpenseRow.swift in Sources */,
+				9B0010132CE0000100000001 /* CategoryChip.swift in Sources */,
+				9B0010142CE0000100000001 /* NumericKeypadView.swift in Sources */,
+				9B0010152CE0000100000001 /* EmptyStateView.swift in Sources */,
+				9B0010162CE0000100000001 /* Date+Extensions.swift in Sources */,
+				9B0010172CE0000100000001 /* Double+Currency.swift in Sources */,
+				9B0010182CE0000100000001 /* ColorTokens.swift in Sources */,
+				9B0010192CE0000100000001 /* Typography.swift in Sources */,
+				9B00101A2CE0000100000001 /* EditExpenseSheet.swift in Sources */,
+				9B00101B2CE0000100000001 /* NotificationManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		9B0080012CE0000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		9B0080022CE0000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9B0080032CE0000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = SimpleNote;
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourname.simplenote;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9B0080042CE0000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = SimpleNote;
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yourname.simplenote;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9B0060002CE0000100000001 /* Build configuration list for PBXProject "SimpleNote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9B0080012CE0000100000001 /* Debug */,
+				9B0080022CE0000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9B0060012CE0000100000001 /* Build configuration list for PBXNativeTarget "SimpleNote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9B0080032CE0000100000001 /* Debug */,
+				9B0080042CE0000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = 9B0000002CE0000100000001 /* Project object */;
+}
