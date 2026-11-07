@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -174,7 +175,7 @@ fun AddExpenseSheet(
                             imageVector = Icons.Default.CalendarMonth,
                             contentDescription = "Pilih Tanggal",
                             tint = TerracottaPrimary,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
                         Text(
@@ -182,6 +183,13 @@ fun AddExpenseSheet(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = CharcoalInk
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = StoneMuted,
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }

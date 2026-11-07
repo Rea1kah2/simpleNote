@@ -264,6 +264,8 @@ fun HistoryScreen(
                                                     .clip(CircleShape)
                                                     .background(if (isSelected) Color.White else TerracottaPrimary)
                                             )
+                                        } else {
+                                            Spacer(modifier = Modifier.size(3.dp))
                                         }
                                     }
                                 }
@@ -322,12 +324,14 @@ fun HistoryScreen(
                         onAddExpenseForDate(targetCal.time)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    shape = CircleShape,
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(13.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("+ Catat", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Catat", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
