@@ -413,6 +413,13 @@ input {
   font-weight: 700;
 }
 
+.day-cell.future-day {
+  opacity: 0.28;
+  cursor: not-allowed;
+  pointer-events: none;
+  color: var(--sn-ink-sec);
+}
+
 .day-dot {
   width: 4px;
   height: 4px;
@@ -468,6 +475,34 @@ input {
   align-items: center;
   padding: 6px 20px 12px 20px;
   font-size: 13px;
+  gap: 12px;
+}
+
+.history-summary-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.quick-add-history-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--sn-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+
+.quick-add-history-btn:active {
+  opacity: 0.82;
 }
 
 .filter-status-text {

@@ -11,6 +11,8 @@ Thumbs.db
 .env.local
 
 # Android & Gradle Build Artifacts
+build/
+simpleNote-android/build/
 .gradle/
 simpleNote-android/.gradle/
 simpleNote-android/app/build/

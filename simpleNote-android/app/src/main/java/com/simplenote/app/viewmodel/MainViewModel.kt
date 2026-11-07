@@ -35,7 +35,18 @@ class MainViewModel(
 
     var editingExpense = MutableStateFlow<ExpenseEntity?>(null)
     var isAddSheetOpen = MutableStateFlow(false)
+    var targetAddDate = MutableStateFlow<Date?>(null)
     var isCategoryManagerOpen = MutableStateFlow(false)
+
+    fun openAddExpense(date: Date? = null) {
+        targetAddDate.value = date
+        isAddSheetOpen.value = true
+    }
+
+    fun closeAddExpense() {
+        targetAddDate.value = null
+        isAddSheetOpen.value = false
+    }
 
     // Cloud & Sync state
     val cloudUrl = MutableStateFlow(repository.cloudPreferences.cloudUrl)
@@ -79,7 +90,7 @@ class MainViewModel(
                 categoryIcon = category.icon
             )
             repository.insertExpense(entity)
-            isAddSheetOpen.value = false
+            closeAddExpense()
             showToast(ToastType.SUCCESS, "Pengeluaran Dicatat", "${category.name} - Rp $amount")
 
             // If auto-sync is on, push update in background

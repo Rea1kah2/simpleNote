@@ -142,7 +142,7 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                 AppTab.TODAY -> {
                     TodayScreen(
                         expenses = expenses,
-                        onAddExpenseClick = { viewModel.isAddSheetOpen.value = true },
+                        onAddExpenseClick = { viewModel.openAddExpense() },
                         onExpenseClick = { viewModel.editingExpense.value = it }
                     )
                 }
@@ -150,7 +150,10 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                     HistoryScreen(
                         expenses = expenses,
                         categories = categories,
-                        onExpenseClick = { viewModel.editingExpense.value = it }
+                        onExpenseClick = { viewModel.editingExpense.value = it },
+                        onAddExpenseForDate = { date ->
+                            viewModel.openAddExpense(date)
+                        }
                     )
                 }
                 AppTab.STATS -> {
@@ -193,9 +196,11 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
 
         // Add Expense Sheet
         if (isAddSheetOpen) {
+            val targetAddDate by viewModel.targetAddDate.collectAsState()
             AddExpenseSheet(
                 categories = categories,
-                onDismiss = { viewModel.isAddSheetOpen.value = false },
+                initialDate = targetAddDate,
+                onDismiss = { viewModel.closeAddExpense() },
                 onSaveExpense = { amount, category, note, timestamp ->
                     viewModel.addExpense(amount, category, note, timestamp)
                 }

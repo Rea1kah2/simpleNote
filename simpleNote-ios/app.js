@@ -273,6 +273,17 @@ function formatRelativeDate(dateObj) {
   return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+function getLocalDatetimeString(dateObj) {
+  const d = new Date(dateObj);
+  const pad = (n) => String(n).padStart(2, '0');
+  const YYYY = d.getFullYear();
+  const MM = pad(d.getMonth() + 1);
+  const DD = pad(d.getDate());
+  const hh = pad(d.getHours());
+  const mm = pad(d.getMinutes());
+  return `${YYYY}-${MM}-${DD}T${hh}:${mm}`;
+}
+
 // MARK: - Bottom Floating Toast Card (High Visibility & Swipeable)
 let toastTimeout = null;
 function showToast({ type = 'success', title, message, duration = 4000 }) {
@@ -866,7 +877,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Register service worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=10').catch((err) => {
+    navigator.serviceWorker.register('sw.js?v=11').catch((err) => {
       console.log('SW registration note:', err);
     });
   }
@@ -1040,6 +1051,17 @@ function setupHistoryTab() {
     state.selectedHistoryDate = null;
     renderHistoryView();
   });
+
+  // Quick Add Button in History Tab
+  const quickAddBtn = document.getElementById('btn-quick-add-history');
+  if (quickAddBtn) {
+    quickAddBtn.addEventListener('click', () => {
+      triggerHaptic();
+      if (state.selectedHistoryDate) {
+        openAddModal(state.selectedHistoryDate);
+      }
+    });
+  }
 }
 
 function renderHistoryView() {
@@ -1098,12 +1120,17 @@ function renderHistoryView() {
   document.getElementById('history-filtered-total').textContent = `Total: ${formatRupiah(total)}`;
 
   const statusLabel = document.getElementById('history-filter-status');
+  const quickAddBtn = document.getElementById('btn-quick-add-history');
+
   if (searchActive) {
     statusLabel.textContent = `Pencarian: "${state.historySearchQuery}"`;
+    if (quickAddBtn) quickAddBtn.style.display = 'none';
   } else if (state.selectedHistoryDate) {
     statusLabel.textContent = formatRelativeDate(state.selectedHistoryDate);
+    if (quickAddBtn) quickAddBtn.style.display = 'inline-flex';
   } else {
     statusLabel.textContent = 'Riwayat Bulan Ini';
+    if (quickAddBtn) quickAddBtn.style.display = 'none';
   }
 
   // Render Grouped List
@@ -1177,6 +1204,7 @@ function renderCalendarDaysGrid() {
   });
 
   const today = new Date();
+  const todayEndOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
   // Blank slots
   for (let i = 0; i < firstDayIndex; i++) {
@@ -1188,6 +1216,9 @@ function renderCalendarDaysGrid() {
     const cell = document.createElement('div');
     cell.className = 'day-cell';
     cell.textContent = day;
+
+    const cellDate = new Date(y, m, day);
+    const isFuture = cellDate.getTime() > todayEndOfDay.getTime();
 
     const isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === day;
     if (isToday) cell.classList.add('today');
@@ -1205,15 +1236,23 @@ function renderCalendarDaysGrid() {
       cell.appendChild(dot);
     }
 
-    cell.addEventListener('click', () => {
-      triggerHaptic();
-      if (state.selectedHistoryDate && state.selectedHistoryDate.getDate() === day) {
-        state.selectedHistoryDate = null; // deselect
-      } else {
-        state.selectedHistoryDate = new Date(y, m, day);
-      }
-      renderHistoryView();
-    });
+    if (isFuture) {
+      cell.classList.add('future-day');
+      cell.title = 'Hari yang belum tiba';
+    } else {
+      cell.addEventListener('click', () => {
+        triggerHaptic();
+        if (state.selectedHistoryDate &&
+            state.selectedHistoryDate.getDate() === day &&
+            state.selectedHistoryDate.getMonth() === m &&
+            state.selectedHistoryDate.getFullYear() === y) {
+          state.selectedHistoryDate = null; // deselect
+        } else {
+          state.selectedHistoryDate = new Date(y, m, day);
+        }
+        renderHistoryView();
+      });
+    }
 
     grid.appendChild(cell);
   }
@@ -1968,13 +2007,28 @@ function setupAddExpenseModal() {
   });
 
   toggleDateBtn.addEventListener('click', () => {
+    dateInput.max = getLocalDatetimeString(new Date());
     dateInput.showPicker ? dateInput.showPicker() : dateInput.focus();
   });
 
   dateInput.addEventListener('change', (e) => {
     if (e.target.value) {
-      state.addDate = new Date(e.target.value);
-      document.getElementById('add-date-label').textContent = formatRelativeDate(state.addDate);
+      const picked = new Date(e.target.value);
+      const now = new Date();
+      if (picked.getTime() > now.getTime()) {
+        triggerHaptic();
+        showToast({
+          type: 'danger',
+          title: 'Tanggal Tidak Valid',
+          message: 'Tidak dapat mencatat transaksi di tanggal masa depan'
+        });
+        state.addDate = new Date();
+        dateInput.value = getLocalDatetimeString(state.addDate);
+        document.getElementById('add-date-label').textContent = 'Hari ini';
+      } else {
+        state.addDate = picked;
+        document.getElementById('add-date-label').textContent = formatRelativeDate(state.addDate);
+      }
     }
   });
 
@@ -1992,12 +2046,27 @@ function setupAddExpenseModal() {
   });
 }
 
-function openAddModal() {
+function openAddModal(targetDate = null) {
   state.addAmountString = '0';
-  state.addDate = new Date();
+  const now = new Date();
+
+  if (targetDate) {
+    const d = new Date(targetDate);
+    d.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    state.addDate = d;
+  } else {
+    state.addDate = now;
+  }
+
+  const dateInput = document.getElementById('add-date-input');
+  if (dateInput) {
+    dateInput.max = getLocalDatetimeString(now);
+    dateInput.value = getLocalDatetimeString(state.addDate);
+  }
+
   state.addCategory = state.categories[0] || DEFAULT_CATEGORIES[0];
   document.getElementById('add-note-input').value = '';
-  document.getElementById('add-date-label').textContent = 'Hari ini';
+  document.getElementById('add-date-label').textContent = formatRelativeDate(state.addDate);
 
   updateAddAmountDisplay();
   renderAddCategoryChips();
@@ -2068,10 +2137,13 @@ function saveNewExpense() {
   const cat = state.addCategory || state.categories[0];
   const icon = cat ? (cat.icon || resolveCategoryIconName(cat)) : 'sparkles';
 
+  const dateStr = formatRelativeDate(state.addDate);
+  const dateSuffix = dateStr !== 'Hari Ini' ? ` pada ${dateStr}` : '';
+
   showConfirmModal({
     icon: '📝',
     title: 'Catat Pengeluaran?',
-    message: `Catat pengeluaran sebesar ${formatRupiah(amt)} untuk kategori "${cat ? cat.name : 'Lainnya'}"?`,
+    message: `Catat pengeluaran sebesar ${formatRupiah(amt)} untuk kategori "${cat ? cat.name : 'Lainnya'}"${dateSuffix}?`,
     confirmText: 'Simpan',
     onConfirm: () => {
       const newExpense = {
@@ -2119,13 +2191,26 @@ function setupEditExpenseModal() {
   });
 
   toggleDateBtn.addEventListener('click', () => {
+    dateInput.max = getLocalDatetimeString(new Date());
     dateInput.showPicker ? dateInput.showPicker() : dateInput.focus();
   });
 
   dateInput.addEventListener('change', (e) => {
     if (e.target.value) {
-      state.editDate = new Date(e.target.value);
-      document.getElementById('edit-date-label').textContent = formatRelativeDate(state.editDate);
+      const picked = new Date(e.target.value);
+      const now = new Date();
+      if (picked.getTime() > now.getTime()) {
+        triggerHaptic();
+        showToast({
+          type: 'danger',
+          title: 'Tanggal Tidak Valid',
+          message: 'Tidak dapat mengubah transaksi ke tanggal masa depan'
+        });
+        dateInput.value = getLocalDatetimeString(state.editDate);
+      } else {
+        state.editDate = picked;
+        document.getElementById('edit-date-label').textContent = formatRelativeDate(state.editDate);
+      }
     }
   });
 
@@ -2229,6 +2314,12 @@ function openEditModal(exp) {
 
   document.getElementById('edit-note-input').value = exp.note || '';
   document.getElementById('edit-date-label').textContent = formatRelativeDate(state.editDate);
+
+  const editDateInput = document.getElementById('edit-date-input');
+  if (editDateInput) {
+    editDateInput.max = getLocalDatetimeString(new Date());
+    editDateInput.value = getLocalDatetimeString(state.editDate);
+  }
 
   const infoEl = document.getElementById('edit-timestamp-info');
   if (infoEl) {
