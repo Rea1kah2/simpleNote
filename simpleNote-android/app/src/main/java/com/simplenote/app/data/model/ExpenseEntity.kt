@@ -18,7 +18,8 @@ data class ExpenseEntity(
     val categoryId: String,
     val categoryName: String,
     val categoryIcon: String = "sparkles",
-    val updatedAt: String? = null
+    val updatedAt: String? = null,
+    val type: String = "expense"
 ) {
     fun parsedDate(): Date? = parseUtcIso(timestamp)
     fun parsedUpdatedDate(): Date? = updatedAt?.let { parseUtcIso(it) }

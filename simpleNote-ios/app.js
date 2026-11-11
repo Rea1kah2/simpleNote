@@ -158,16 +158,26 @@ function getCategoryIcon(catOrExp, size = 18) {
 
 // MARK: - Default Constants
 const DEFAULT_CATEGORIES = [
-  { id: 'cat_food', name: 'Makan & Minum', icon: 'utensils', isDefault: true },
-  { id: 'cat_trans', name: 'Transportasi', icon: 'car', isDefault: true },
-  { id: 'cat_shop', name: 'Belanja', icon: 'shopping-bag', isDefault: true },
-  { id: 'cat_bill', name: 'Tagihan', icon: 'receipt', isDefault: true },
-  { id: 'cat_fun', name: 'Hiburan', icon: 'ticket', isDefault: true },
-  { id: 'cat_coffee', name: 'Kopi & Jajan', icon: 'coffee', isDefault: true },
-  { id: 'cat_health', name: 'Kesehatan', icon: 'pill', isDefault: true },
-  { id: 'cat_edu', name: 'Pendidikan', icon: 'book', isDefault: true },
-  { id: 'cat_charity', name: 'Donasi', icon: 'heart', isDefault: true },
-  { id: 'cat_other', name: 'Lainnya', icon: 'sparkles', isDefault: true }
+  { id: 'cat_food', name: 'Makan & Minum', icon: 'utensils', isDefault: true, type: 'expense' },
+  { id: 'cat_trans', name: 'Transportasi', icon: 'car', isDefault: true, type: 'expense' },
+  { id: 'cat_shop', name: 'Belanja', icon: 'shopping-bag', isDefault: true, type: 'expense' },
+  { id: 'cat_bill', name: 'Tagihan', icon: 'receipt', isDefault: true, type: 'expense' },
+  { id: 'cat_fun', name: 'Hiburan', icon: 'ticket', isDefault: true, type: 'expense' },
+  { id: 'cat_coffee', name: 'Kopi & Jajan', icon: 'coffee', isDefault: true, type: 'expense' },
+  { id: 'cat_health', name: 'Kesehatan', icon: 'pill', isDefault: true, type: 'expense' },
+  { id: 'cat_edu', name: 'Pendidikan', icon: 'book', isDefault: true, type: 'expense' },
+  { id: 'cat_charity', name: 'Donasi', icon: 'heart', isDefault: true, type: 'expense' },
+  { id: 'cat_other', name: 'Lainnya', icon: 'sparkles', isDefault: true, type: 'expense' }
+];
+
+const DEFAULT_INCOME_CATEGORIES = [
+  { id: 'inc_salary', name: 'Gaji', icon: 'briefcase', isDefault: true, type: 'income' },
+  { id: 'inc_freelance', name: 'Freelance', icon: 'zap', isDefault: true, type: 'income' },
+  { id: 'inc_bonus', name: 'Bonus', icon: 'gift', isDefault: true, type: 'income' },
+  { id: 'inc_gift', name: 'Hadiah', icon: 'heart', isDefault: true, type: 'income' },
+  { id: 'inc_business', name: 'Usaha', icon: 'home', isDefault: true, type: 'income' },
+  { id: 'inc_invest', name: 'Investasi', icon: 'wallet', isDefault: true, type: 'income' },
+  { id: 'inc_other', name: 'Lainnya', icon: 'sparkles', isDefault: true, type: 'income' }
 ];
 
 const WARM_PALETTE = [
@@ -186,6 +196,9 @@ const WARM_PALETTE = [
 // MARK: - State Management
 const state = {
   currentTab: 'tab-today',
+  todayMode: 'expense', // 'expense' | 'income'
+  historyTypeFilter: 'expense', // 'expense' | 'income' | null
+  statsMode: 'expense', // 'expense' | 'income'
   expenses: [],
   categories: [],
   
@@ -203,6 +216,7 @@ const state = {
   shouldAutoScrollDaily: false,
   
   // Add Expense Modal State
+  addMode: 'expense', // 'expense' | 'income'
   addAmountString: '0',
   addCategory: null,
   addDate: new Date(),
@@ -559,8 +573,9 @@ function updateSyncIndicator(isOnline) {
 function sanitizeData() {
   if (Array.isArray(state.categories)) {
     state.categories.forEach((cat) => {
+      if (!cat.type) cat.type = 'expense';
       if (!cat.icon || !SVG_ICONS[cat.icon]) {
-        const def = DEFAULT_CATEGORIES.find((dc) => dc.id === cat.id);
+        const def = [...DEFAULT_CATEGORIES, ...DEFAULT_INCOME_CATEGORIES].find((dc) => dc.id === cat.id);
         if (def && def.icon) {
           cat.icon = def.icon;
         } else if (cat.emoji && EMOJI_TO_ICON_MAP[cat.emoji]) {
@@ -571,10 +586,17 @@ function sanitizeData() {
       }
       delete cat.emoji;
     });
+
+    const hasIncomeCats = state.categories.some((c) => c.type === 'income');
+    if (!hasIncomeCats) {
+      state.categories.push(...DEFAULT_INCOME_CATEGORIES);
+      idbSaveAll('categories', state.categories);
+    }
   }
 
   if (Array.isArray(state.expenses)) {
     state.expenses.forEach((exp) => {
+      if (!exp.type) exp.type = 'expense';
       exp.categoryIcon = resolveCategoryIconName(exp);
       delete exp.categoryEmoji;
       delete exp.emoji;
@@ -933,10 +955,27 @@ function setupNavigation() {
 // ==========================================================================
 function setupTodayTab() {
   const btnOpenAdd = document.getElementById('btn-open-add');
-  btnOpenAdd.addEventListener('click', () => {
-    triggerHaptic();
-    openAddModal();
-  });
+  if (btnOpenAdd) {
+    btnOpenAdd.addEventListener('click', () => {
+      triggerHaptic();
+      openAddModal(null, state.todayMode);
+    });
+  }
+
+  const btnModeExpense = document.getElementById('btn-mode-expense');
+  const btnModeIncome = document.getElementById('btn-mode-income');
+  if (btnModeExpense && btnModeIncome) {
+    btnModeExpense.addEventListener('click', () => {
+      triggerHaptic();
+      state.todayMode = 'expense';
+      renderTodayView();
+    });
+    btnModeIncome.addEventListener('click', () => {
+      triggerHaptic();
+      state.todayMode = 'income';
+      renderTodayView();
+    });
+  }
 }
 
 function renderTodayView() {
@@ -944,53 +983,122 @@ function renderTodayView() {
   const days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   
-  document.getElementById('hero-day-name').textContent = days[now.getDay()];
-  document.getElementById('hero-full-date').textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  const heroDay = document.getElementById('hero-day-name');
+  if (heroDay) heroDay.textContent = days[now.getDay()];
+  const heroDate = document.getElementById('hero-full-date');
+  if (heroDate) heroDate.textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
 
-  // Filter today's expenses
-  const todayExpenses = state.expenses.filter((exp) => {
+  // Filter today's all transactions
+  const todayAll = state.expenses.filter((exp) => {
     const d = new Date(exp.timestamp);
     return d.getFullYear() === now.getFullYear() &&
            d.getMonth() === now.getMonth() &&
            d.getDate() === now.getDate();
   });
 
-  const todaySum = todayExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-  document.getElementById('today-total-display').textContent = formatRupiah(todaySum);
+  const todayExpenses = todayAll.filter(x => x.type !== 'income');
+  const todayIncomes = todayAll.filter(x => x.type === 'income');
 
-  const statusText = document.getElementById('today-status-text');
-  if (todayExpenses.length === 0) {
-    statusText.textContent = 'Dompetmu masih tenang hari ini';
-  } else {
-    statusText.textContent = `${todayExpenses.length} transaksi tercatat secara sadar`;
+  const expenseSum = todayExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const incomeSum = todayIncomes.reduce((acc, curr) => acc + curr.amount, 0);
+  const netSaldo = incomeSum - expenseSum;
+
+  // Display Net Balance
+  const netPrefix = netSaldo > 0 ? '+ ' : '';
+  const totalDisplay = document.getElementById('today-total-display');
+  if (totalDisplay) {
+    totalDisplay.textContent = `${netPrefix}${formatRupiah(netSaldo)}`;
   }
 
+  const signatureBar = document.getElementById('today-signature-bar');
+  if (signatureBar) {
+    signatureBar.style.background = netSaldo >= 0 ? 'var(--sn-income)' : 'var(--sn-accent)';
+  }
+
+  const incomeSubtotal = document.getElementById('today-income-subtotal');
+  if (incomeSubtotal) incomeSubtotal.textContent = formatRupiah(incomeSum);
+
+  const expenseSubtotal = document.getElementById('today-expense-subtotal');
+  if (expenseSubtotal) expenseSubtotal.textContent = formatRupiah(expenseSum);
+
+  // Update counts on segmented pill
+  const badgeExpense = document.getElementById('badge-count-expense');
+  if (badgeExpense) badgeExpense.textContent = `(${todayExpenses.length})`;
+
+  const badgeIncome = document.getElementById('badge-count-income');
+  if (badgeIncome) badgeIncome.textContent = `(${todayIncomes.length})`;
+
+  const btnModeExp = document.getElementById('btn-mode-expense');
+  const btnModeInc = document.getElementById('btn-mode-income');
+  if (btnModeExp && btnModeInc) {
+    if (state.todayMode === 'income') {
+      btnModeExp.classList.remove('active-expense');
+      btnModeInc.classList.add('active-income');
+    } else {
+      btnModeExp.classList.add('active-expense');
+      btnModeInc.classList.remove('active-income');
+    }
+  }
+
+  // Update FAB
+  const fabBtn = document.getElementById('btn-open-add');
+  const fabLabel = document.getElementById('fab-label');
+  if (fabBtn) {
+    if (state.todayMode === 'income') {
+      fabBtn.classList.add('income-mode');
+      fabBtn.setAttribute('aria-label', 'Catat Pemasukan');
+      if (fabLabel) fabLabel.textContent = 'Catat';
+    } else {
+      fabBtn.classList.remove('income-mode');
+      fabBtn.setAttribute('aria-label', 'Catat Pengeluaran');
+      if (fabLabel) fabLabel.textContent = 'Catat';
+    }
+  }
+
+  // Update list title
+  const listTitle = document.getElementById('today-list-title');
+  if (listTitle) {
+    listTitle.textContent = state.todayMode === 'income' ? 'Aktivitas Pemasukan' : 'Aktivitas Pengeluaran';
+  }
+
+  const activeList = state.todayMode === 'income' ? todayIncomes : todayExpenses;
+
   const countBadge = document.getElementById('today-count-badge');
-  countBadge.textContent = todayExpenses.length > 0 ? `${todayExpenses.length} transaksi` : '';
+  if (countBadge) {
+    countBadge.textContent = activeList.length > 0 ? `${activeList.length} transaksi` : '';
+  }
 
   const listContainer = document.getElementById('today-expenses-list');
-  listContainer.innerHTML = '';
-
-  if (todayExpenses.length === 0) {
-    listContainer.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">${renderSvgIcon('coffee', 28)}</div>
-        <div class="empty-title">Belum Ada Catatan Hari Ini</div>
-        <div class="empty-msg">Setiap pengeluaran kecil itu berharga. Ketuk tombol <strong>Catat</strong> di bawah untuk memulai jurnal belanjamu hari ini.</div>
-      </div>
-    `;
-  } else {
-    todayExpenses.forEach((exp) => {
-      const row = createExpenseRowElement(exp);
-      listContainer.appendChild(row);
-    });
+  if (listContainer) {
+    listContainer.innerHTML = '';
+    if (activeList.length === 0) {
+      const emptyIcon = state.todayMode === 'income' ? 'briefcase' : 'coffee';
+      const emptyTitle = state.todayMode === 'income' ? 'Belum Ada Pemasukan Hari Ini' : 'Belum Ada Pengeluaran Hari Ini';
+      const emptyMsg = state.todayMode === 'income'
+        ? 'Gaji, freelance, atau bonus yang masuk hari ini? Ketuk tombol <strong>Catat</strong> untuk mendata pemasukan.'
+        : 'Setiap pengeluaran kecil itu berharga. Ketuk tombol <strong>Catat</strong> di bawah untuk memulai jurnal belanjamu hari ini.';
+      listContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">${renderSvgIcon(emptyIcon, 28)}</div>
+          <div class="empty-title">${emptyTitle}</div>
+          <div class="empty-msg">${emptyMsg}</div>
+        </div>
+      `;
+    } else {
+      activeList.forEach((exp) => {
+        const row = createExpenseRowElement(exp);
+        listContainer.appendChild(row);
+      });
+    }
   }
 }
 
 function createExpenseRowElement(exp) {
+  const isIncome = exp.type === 'income';
   const row = document.createElement('div');
-  row.className = 'expense-row';
+  row.className = isIncome ? 'expense-row income-row' : 'expense-row';
   const editedHtml = exp.updatedAt ? `<div class="expense-edited">Diedit: ${formatEditedTime(exp.updatedAt)}</div>` : '';
+  const amountPrefix = isIncome ? '+ ' : '';
   row.innerHTML = `
     <span class="expense-svg-icon">${getCategoryIcon(exp, 18)}</span>
     <div class="expense-detail">
@@ -998,7 +1106,7 @@ function createExpenseRowElement(exp) {
       ${exp.note ? `<div class="expense-note">${escapeHtml(exp.note)}</div>` : ''}
     </div>
     <div class="expense-right">
-      <div class="expense-amount">${formatRupiah(exp.amount)}</div>
+      <div class="expense-amount">${amountPrefix}${formatRupiah(exp.amount)}</div>
       <div class="expense-time">${formatTime(exp.timestamp)}</div>
       ${editedHtml}
     </div>
@@ -1052,13 +1160,38 @@ function setupHistoryTab() {
     renderHistoryView();
   });
 
+  // History Type Filter Buttons (Keluar / Masuk / Semua)
+  const btnHistExp = document.getElementById('btn-hist-expense');
+  const btnHistInc = document.getElementById('btn-hist-income');
+  const btnHistAll = document.getElementById('btn-hist-all');
+  if (btnHistExp && btnHistInc && btnHistAll) {
+    btnHistExp.addEventListener('click', () => {
+      triggerHaptic();
+      state.historyTypeFilter = 'expense';
+      state.historyCategoryFilter = null;
+      renderHistoryView();
+    });
+    btnHistInc.addEventListener('click', () => {
+      triggerHaptic();
+      state.historyTypeFilter = 'income';
+      state.historyCategoryFilter = null;
+      renderHistoryView();
+    });
+    btnHistAll.addEventListener('click', () => {
+      triggerHaptic();
+      state.historyTypeFilter = null;
+      state.historyCategoryFilter = null;
+      renderHistoryView();
+    });
+  }
+
   // Quick Add Button in History Tab
   const quickAddBtn = document.getElementById('btn-quick-add-history');
   if (quickAddBtn) {
     quickAddBtn.addEventListener('click', () => {
       triggerHaptic();
       if (state.selectedHistoryDate) {
-        openAddModal(state.selectedHistoryDate);
+        openAddModal(state.selectedHistoryDate, state.historyTypeFilter || 'expense');
       }
     });
   }
@@ -1071,6 +1204,16 @@ function renderHistoryView() {
 
   document.getElementById('calendar-month-label').textContent = formatMonthYear(state.historyMonth);
 
+  // Update Type Filter Buttons active classes
+  const btnHistExp = document.getElementById('btn-hist-expense');
+  const btnHistInc = document.getElementById('btn-hist-income');
+  const btnHistAll = document.getElementById('btn-hist-all');
+  if (btnHistExp && btnHistInc && btnHistAll) {
+    btnHistExp.className = `hist-type-pill ${state.historyTypeFilter === 'expense' ? 'active-expense' : ''}`;
+    btnHistInc.className = `hist-type-pill ${state.historyTypeFilter === 'income' ? 'active-income' : ''}`;
+    btnHistAll.className = `hist-type-pill ${state.historyTypeFilter === null ? 'active-all' : ''}`;
+  }
+
   // Render Calendar Grid
   renderCalendarDaysGrid();
 
@@ -1079,6 +1222,11 @@ function renderHistoryView() {
 
   // Filter Expenses
   let filtered = [...state.expenses];
+
+  // Apply Type Filter (Keluar / Masuk / Semua)
+  if (state.historyTypeFilter) {
+    filtered = filtered.filter((exp) => (state.historyTypeFilter === 'income' ? exp.type === 'income' : exp.type !== 'income'));
+  }
 
   if (searchActive) {
     const q = state.historySearchQuery.toLowerCase();
@@ -1122,14 +1270,16 @@ function renderHistoryView() {
   const statusLabel = document.getElementById('history-filter-status');
   const quickAddBtn = document.getElementById('btn-quick-add-history');
 
+  const typeName = state.historyTypeFilter === 'income' ? 'Pemasukan' : (state.historyTypeFilter === 'expense' ? 'Pengeluaran' : 'Transaksi');
+
   if (searchActive) {
-    statusLabel.textContent = `Pencarian: "${state.historySearchQuery}"`;
+    statusLabel.textContent = `Pencarian: "${state.historySearchQuery}" (${typeName})`;
     if (quickAddBtn) quickAddBtn.style.display = 'none';
   } else if (state.selectedHistoryDate) {
-    statusLabel.textContent = formatRelativeDate(state.selectedHistoryDate);
+    statusLabel.textContent = `${formatRelativeDate(state.selectedHistoryDate)} (${typeName})`;
     if (quickAddBtn) quickAddBtn.style.display = 'inline-flex';
   } else {
-    statusLabel.textContent = 'Riwayat Bulan Ini';
+    statusLabel.textContent = `Semua ${typeName} Bulan Ini`;
     if (quickAddBtn) quickAddBtn.style.display = 'none';
   }
 
@@ -1194,12 +1344,16 @@ function renderCalendarDaysGrid() {
   const firstDayIndex = new Date(y, m, 1).getDay();
   const totalDays = new Date(y, m + 1, 0).getDate();
 
-  // Find which days have expenses
+  // Find which days have transactions matching active filter
   const activeDays = new Set();
   state.expenses.forEach((exp) => {
-    const d = new Date(exp.timestamp);
-    if (d.getFullYear() === y && d.getMonth() === m) {
-      activeDays.add(d.getDate());
+    const matchesType = !state.historyTypeFilter ||
+      (state.historyTypeFilter === 'income' ? exp.type === 'income' : exp.type !== 'income');
+    if (matchesType) {
+      const d = new Date(exp.timestamp);
+      if (d.getFullYear() === y && d.getMonth() === m) {
+        activeDays.add(d.getDate());
+      }
     }
   });
 
@@ -1233,6 +1387,9 @@ function renderCalendarDaysGrid() {
     if (activeDays.has(day)) {
       const dot = document.createElement('span');
       dot.className = 'day-dot';
+      if (state.historyTypeFilter === 'income') {
+        dot.style.backgroundColor = 'var(--sn-income)';
+      }
       cell.appendChild(dot);
     }
 
@@ -1262,9 +1419,16 @@ function renderHistoryCategoryChips() {
   const container = document.getElementById('history-category-filters');
   container.innerHTML = '';
 
+  const relevantCats = state.categories.filter((c) => {
+    if (!state.historyTypeFilter) return true;
+    return state.historyTypeFilter === 'income' ? c.type === 'income' : c.type !== 'income';
+  });
+
+  const activeColorClass = state.historyTypeFilter === 'income' ? 'active-income' : 'active';
+
   // "Semua" Chip
   const allBtn = document.createElement('button');
-  allBtn.className = `chip-btn ${state.historyCategoryFilter === null ? 'active' : ''}`;
+  allBtn.className = `chip-btn ${state.historyCategoryFilter === null ? activeColorClass : ''}`;
   allBtn.textContent = 'Semua';
   allBtn.addEventListener('click', () => {
     triggerHaptic();
@@ -1274,10 +1438,10 @@ function renderHistoryCategoryChips() {
   container.appendChild(allBtn);
 
   // Category Chips
-  state.categories.forEach((cat) => {
+  relevantCats.forEach((cat) => {
     const chip = document.createElement('button');
     const isSelected = state.historyCategoryFilter && state.historyCategoryFilter.id === cat.id;
-    chip.className = `chip-btn ${isSelected ? 'active' : ''}`;
+    chip.className = `chip-btn ${isSelected ? activeColorClass : ''}`;
     chip.innerHTML = `<span class="chip-svg-icon">${getCategoryIcon(cat, 15)}</span> <span>${escapeHtml(cat.name)}</span>`;
     chip.addEventListener('click', () => {
       triggerHaptic();
@@ -1310,6 +1474,26 @@ function setupStatsTab() {
     renderStatsView();
   });
 
+  // Stats Mode Switcher Buttons (Pengeluaran / Pemasukan)
+  const btnStatsExp = document.getElementById('btn-stats-mode-expense');
+  const btnStatsInc = document.getElementById('btn-stats-mode-income');
+  if (btnStatsExp && btnStatsInc) {
+    btnStatsExp.addEventListener('click', () => {
+      triggerHaptic();
+      state.statsMode = 'expense';
+      state.statsSelectedWeekId = null;
+      state.statsSelectedDay = null;
+      renderStatsView();
+    });
+    btnStatsInc.addEventListener('click', () => {
+      triggerHaptic();
+      state.statsMode = 'income';
+      state.statsSelectedWeekId = null;
+      state.statsSelectedDay = null;
+      renderStatsView();
+    });
+  }
+
   const btnWeekly = document.getElementById('btn-trend-weekly');
   const btnDaily = document.getElementById('btn-trend-daily');
 
@@ -1339,22 +1523,75 @@ function renderStatsView() {
   const y = state.statsMonth.getFullYear();
   const m = state.statsMonth.getMonth();
 
-  const monthlyExpenses = state.expenses.filter((exp) => {
+  // All monthly transactions
+  const monthlyAll = state.expenses.filter((exp) => {
     const d = new Date(exp.timestamp);
     return d.getFullYear() === y && d.getMonth() === m;
   });
 
-  const total = monthlyExpenses.reduce((acc, curr) => acc + curr.amount, 0);
-  document.getElementById('stats-monthly-total').textContent = formatRupiah(total);
-  document.getElementById('donut-center-amount').textContent = formatCompactRupiah(total);
+  const monthlyExpenses = monthlyAll.filter((exp) => exp.type !== 'income');
+  const monthlyIncomes = monthlyAll.filter((exp) => exp.type === 'income');
+
+  const totalExpense = monthlyExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalIncome = monthlyIncomes.reduce((acc, curr) => acc + curr.amount, 0);
+  const netSaldo = totalIncome - totalExpense;
+
+  // Update Balance Card
+  const totalIncomeEl = document.getElementById('stats-total-income');
+  if (totalIncomeEl) totalIncomeEl.textContent = `+ ${formatRupiah(totalIncome)}`;
+
+  const totalExpenseEl = document.getElementById('stats-total-expense');
+  if (totalExpenseEl) totalExpenseEl.textContent = `- ${formatRupiah(totalExpense)}`;
+
+  const netSaldoEl = document.getElementById('stats-net-saldo');
+  if (netSaldoEl) {
+    const netPrefix = netSaldo > 0 ? '+ ' : '';
+    netSaldoEl.textContent = `${netPrefix}${formatRupiah(netSaldo)}`;
+    if (netSaldo < 0) {
+      netSaldoEl.classList.add('negative');
+    } else {
+      netSaldoEl.classList.remove('negative');
+    }
+  }
+
+  // Update Segmented Pill Counts and Active state
+  const badgeExp = document.getElementById('badge-stats-expense');
+  if (badgeExp) badgeExp.textContent = `(${monthlyExpenses.length})`;
+
+  const badgeInc = document.getElementById('badge-stats-income');
+  if (badgeInc) badgeInc.textContent = `(${monthlyIncomes.length})`;
+
+  const btnStatsExp = document.getElementById('btn-stats-mode-expense');
+  const btnStatsInc = document.getElementById('btn-stats-mode-income');
+  if (btnStatsExp && btnStatsInc) {
+    if (state.statsMode === 'income') {
+      btnStatsExp.classList.remove('active-expense');
+      btnStatsInc.classList.add('active-income');
+    } else {
+      btnStatsExp.classList.add('active-expense');
+      btnStatsInc.classList.remove('active-income');
+    }
+  }
+
+  const isIncomeMode = state.statsMode === 'income';
+  const activeList = isIncomeMode ? monthlyIncomes : monthlyExpenses;
+  const totalActive = isIncomeMode ? totalIncome : totalExpense;
+
+  const modeLabel = document.getElementById('stats-active-mode-label');
+  if (modeLabel) {
+    modeLabel.textContent = isIncomeMode ? 'TOTAL PEMASUKAN BULAN INI' : 'TOTAL PENGELUARAN BULAN INI';
+  }
+
+  document.getElementById('stats-monthly-total').textContent = formatRupiah(totalActive);
+  document.getElementById('donut-center-amount').textContent = formatCompactRupiah(totalActive);
 
   const daysInMonth = new Date(y, m + 1, 0).getDate();
-  const avg = total > 0 ? total / daysInMonth : 0;
+  const avg = totalActive > 0 ? totalActive / daysInMonth : 0;
   document.getElementById('stats-average-daily').textContent = `Rata-rata: ${formatCompactRupiah(avg)}/hari`;
 
-  // Aggregate Category Breakdown
+  // Aggregate Category Breakdown for active mode
   const catMap = {};
-  monthlyExpenses.forEach((exp) => {
+  activeList.forEach((exp) => {
     const name = exp.categoryName || 'Lainnya';
     const icon = exp.categoryIcon || exp.icon || (exp.categoryEmoji ? EMOJI_TO_ICON_MAP[exp.categoryEmoji] : 'sparkles');
     if (!catMap[name]) catMap[name] = { amount: 0, icon, name };
@@ -1364,18 +1601,19 @@ function renderStatsView() {
   const catStats = Object.values(catMap).sort((a, b) => b.amount - a.amount);
 
   // Render SVG Donut Chart
-  renderDonutChart(catStats, total);
+  renderDonutChart(catStats, totalActive);
 
   // Render Category Breakdown List
   const breakdownList = document.getElementById('stats-category-list');
   breakdownList.innerHTML = '';
 
   if (catStats.length === 0) {
-    breakdownList.innerHTML = `<div class="empty-msg" style="text-align:center; padding: 20px 0;">Belum ada pengeluaran di bulan ini.</div>`;
+    const emptyNotice = isIncomeMode ? 'Belum ada pemasukan di bulan ini.' : 'Belum ada pengeluaran di bulan ini.';
+    breakdownList.innerHTML = `<div class="empty-msg" style="text-align:center; padding: 20px 0;">${emptyNotice}</div>`;
   } else {
     catStats.forEach((cat, idx) => {
       const color = WARM_PALETTE[idx % WARM_PALETTE.length];
-      const pct = total > 0 ? ((cat.amount / total) * 100).toFixed(1) : '0';
+      const pct = totalActive > 0 ? ((cat.amount / totalActive) * 100).toFixed(1) : '0';
 
       const row = document.createElement('div');
       row.className = 'cat-breakdown-row';
@@ -1452,7 +1690,8 @@ function renderTrendBreakdown(matchingExpenses, title) {
 
   listEl.innerHTML = '';
   if (matchingExpenses.length === 0) {
-    listEl.innerHTML = `<div class="trend-breakdown-empty">Tidak ada catatan pengeluaran pada periode ini.</div>`;
+    const emptyNotice = state.statsMode === 'income' ? 'Tidak ada catatan pemasukan pada periode ini.' : 'Tidak ada catatan pengeluaran pada periode ini.';
+    listEl.innerHTML = `<div class="trend-breakdown-empty">${emptyNotice}</div>`;
     return;
   }
 
@@ -1478,9 +1717,12 @@ function renderStatsTrendChart() {
   const m = state.statsMonth.getMonth();
   const daysInMonth = new Date(y, m + 1, 0).getDate();
 
+  const isIncomeMode = state.statsMode === 'income';
   const monthlyExpenses = state.expenses.filter((exp) => {
     const d = new Date(exp.timestamp);
-    return d.getFullYear() === y && d.getMonth() === m;
+    const inMonth = d.getFullYear() === y && d.getMonth() === m;
+    const matchesMode = isIncomeMode ? exp.type === 'income' : exp.type !== 'income';
+    return inMonth && matchesMode;
   });
 
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -2046,7 +2288,8 @@ function setupAddExpenseModal() {
   });
 }
 
-function openAddModal(targetDate = null) {
+function openAddModal(targetDate = null, mode = 'expense') {
+  state.addMode = mode || 'expense';
   state.addAmountString = '0';
   const now = new Date();
 
@@ -2064,9 +2307,26 @@ function openAddModal(targetDate = null) {
     dateInput.value = getLocalDatetimeString(state.addDate);
   }
 
-  state.addCategory = state.categories[0] || DEFAULT_CATEGORIES[0];
+  const isIncome = state.addMode === 'income';
+  const matchingCats = state.categories.filter((c) => (isIncome ? c.type === 'income' : c.type !== 'income'));
+  state.addCategory = matchingCats[0] || (isIncome ? DEFAULT_INCOME_CATEGORIES[0] : DEFAULT_CATEGORIES[0]);
+
   document.getElementById('add-note-input').value = '';
   document.getElementById('add-date-label').textContent = formatRelativeDate(state.addDate);
+
+  const modalSheet = document.querySelector('#modal-add-expense .modal-sheet');
+  const modalTitle = document.querySelector('#modal-add-expense .sheet-title');
+  const saveBtnSpan = document.querySelector('#btn-save-expense span');
+
+  if (isIncome) {
+    if (modalSheet) modalSheet.classList.add('income-mode');
+    if (modalTitle) modalTitle.textContent = 'Tambah Pemasukan';
+    if (saveBtnSpan) saveBtnSpan.textContent = 'Simpan Pemasukan';
+  } else {
+    if (modalSheet) modalSheet.classList.remove('income-mode');
+    if (modalTitle) modalTitle.textContent = 'Catat Pengeluaran';
+    if (saveBtnSpan) saveBtnSpan.textContent = 'Simpan Pengeluaran';
+  }
 
   updateAddAmountDisplay();
   renderAddCategoryChips();
@@ -2107,7 +2367,9 @@ function handleKeypadInput(mode, key) {
 
 function updateAddAmountDisplay() {
   const amt = parseFloat(state.addAmountString) || 0;
-  document.getElementById('add-amount-display').textContent = formatRupiah(amt);
+  const isIncome = state.addMode === 'income';
+  const prefix = isIncome && amt > 0 ? '+ ' : '';
+  document.getElementById('add-amount-display').textContent = `${prefix}${formatRupiah(amt)}`;
   document.getElementById('btn-save-expense').disabled = amt <= 0;
 }
 
@@ -2115,7 +2377,10 @@ function renderAddCategoryChips() {
   const container = document.getElementById('add-category-chips');
   container.innerHTML = '';
 
-  state.categories.forEach((cat) => {
+  const isIncome = state.addMode === 'income';
+  const relevantCats = state.categories.filter((c) => (isIncome ? c.type === 'income' : c.type !== 'income'));
+
+  relevantCats.forEach((cat) => {
     const chip = document.createElement('button');
     const isSelected = state.addCategory && state.addCategory.id === cat.id;
     chip.className = `chip-btn ${isSelected ? 'active' : ''}`;
@@ -2133,6 +2398,10 @@ function saveNewExpense() {
   const amt = parseFloat(state.addAmountString) || 0;
   if (amt <= 0) return;
 
+  const isIncome = state.addMode === 'income';
+  const typeLabel = isIncome ? 'pemasukan' : 'pengeluaran';
+  const typeTitle = isIncome ? 'Pemasukan' : 'Pengeluaran';
+
   const note = document.getElementById('add-note-input').value.trim();
   const cat = state.addCategory || state.categories[0];
   const icon = cat ? (cat.icon || resolveCategoryIconName(cat)) : 'sparkles';
@@ -2141,19 +2410,21 @@ function saveNewExpense() {
   const dateSuffix = dateStr !== 'Hari Ini' ? ` pada ${dateStr}` : '';
 
   showConfirmModal({
-    icon: '📝',
-    title: 'Catat Pengeluaran?',
-    message: `Catat pengeluaran sebesar ${formatRupiah(amt)} untuk kategori "${cat ? cat.name : 'Lainnya'}"${dateSuffix}?`,
+    icon: isIncome ? '💚' : '📝',
+    title: `Catat ${typeTitle}?`,
+    message: `Catat ${typeLabel} sebesar ${formatRupiah(amt)} untuk kategori "${cat ? cat.name : 'Lainnya'}"${dateSuffix}?`,
     confirmText: 'Simpan',
     onConfirm: () => {
+      const prefix = isIncome ? 'inc_' : 'exp_';
       const newExpense = {
-        id: 'exp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        id: prefix + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         amount: amt,
         note: note,
         timestamp: state.addDate.toISOString(),
-        categoryId: cat ? cat.id : 'cat_other',
+        categoryId: cat ? cat.id : (isIncome ? 'inc_other' : 'cat_other'),
         categoryName: cat ? cat.name : 'Lainnya',
-        categoryIcon: icon
+        categoryIcon: icon,
+        type: state.addMode || 'expense'
       };
 
       state.expenses.unshift(newExpense);
@@ -2165,7 +2436,7 @@ function saveNewExpense() {
 
       showToast({
         type: 'success',
-        title: 'Pengeluaran Dicatat',
+        title: `${typeTitle} Dicatat`,
         message: `${newExpense.note || newExpense.categoryName} • ${formatRupiah(newExpense.amount)}`
       });
     }
@@ -2331,6 +2602,17 @@ function openEditModal(exp) {
     }
   }
 
+  const isIncome = exp.type === 'income';
+  const modalSheet = document.querySelector('#modal-edit-expense .modal-sheet');
+  const modalTitle = document.querySelector('#modal-edit-expense .sheet-title');
+  if (isIncome) {
+    if (modalSheet) modalSheet.classList.add('income-mode');
+    if (modalTitle) modalTitle.textContent = 'Ubah Pemasukan';
+  } else {
+    if (modalSheet) modalSheet.classList.remove('income-mode');
+    if (modalTitle) modalTitle.textContent = 'Ubah Pengeluaran';
+  }
+
   const iconPickerGrid = document.getElementById('edit-icon-picker-grid');
   if (iconPickerGrid) iconPickerGrid.style.display = 'none';
 
@@ -2345,7 +2627,10 @@ function openEditModal(exp) {
 
 function updateEditAmountDisplay() {
   const amt = parseFloat(state.editAmountString) || 0;
-  document.getElementById('edit-amount-display').textContent = formatRupiah(amt);
+  const exp = state.expenses.find((e) => e.id === state.editingExpenseId);
+  const isIncome = exp && exp.type === 'income';
+  const prefix = isIncome && amt > 0 ? '+ ' : '';
+  document.getElementById('edit-amount-display').textContent = `${prefix}${formatRupiah(amt)}`;
   document.getElementById('btn-update-expense').disabled = amt <= 0;
 }
 
@@ -2353,10 +2638,14 @@ function renderEditCategoryChips() {
   const container = document.getElementById('edit-category-chips');
   container.innerHTML = '';
 
-  state.categories.forEach((cat) => {
+  const exp = state.expenses.find((e) => e.id === state.editingExpenseId);
+  const isIncome = exp && exp.type === 'income';
+  const relevantCats = state.categories.filter((c) => (isIncome ? c.type === 'income' : c.type !== 'income'));
+
+  relevantCats.forEach((cat) => {
     const chip = document.createElement('button');
     const isSelected = state.editCategory && state.editCategory.id === cat.id;
-    chip.className = `chip-btn ${isSelected ? 'active' : ''}`;
+    chip.className = `chip-btn ${isSelected ? (isIncome ? 'active-income' : 'active') : ''}`;
     chip.innerHTML = `<span class="chip-svg-icon">${getCategoryIcon(cat, 15)}</span> <span>${escapeHtml(cat.name)}</span>`;
     chip.addEventListener('click', () => {
       triggerHaptic();

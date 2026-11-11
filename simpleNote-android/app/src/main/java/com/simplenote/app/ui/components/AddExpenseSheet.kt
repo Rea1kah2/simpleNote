@@ -52,6 +52,7 @@ import com.simplenote.app.data.model.CategoryEntity
 import com.simplenote.app.ui.theme.BorderBeige
 import com.simplenote.app.ui.theme.CardSurface
 import com.simplenote.app.ui.theme.CharcoalInk
+import com.simplenote.app.ui.theme.EmeraldPrimary
 import com.simplenote.app.ui.theme.PaperBackground
 import com.simplenote.app.ui.theme.StoneMuted
 import com.simplenote.app.ui.theme.TerracottaPrimary
@@ -65,15 +66,26 @@ import java.util.TimeZone
 @Composable
 fun AddExpenseSheet(
     categories: List<CategoryEntity>,
+    mode: String = "expense",
     initialDate: Date? = null,
     onDismiss: () -> Unit,
-    onSaveExpense: (amount: Long, category: CategoryEntity, note: String, timestamp: String) -> Unit
+    onSaveExpense: (amount: Long, category: CategoryEntity, note: String, timestamp: String, type: String) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val isIncome = mode == "income"
+    val accentColor = if (isIncome) EmeraldPrimary else TerracottaPrimary
+    val sheetTitle = if (isIncome) "Tambah Pemasukan" else "Tambah Pengeluaran"
+    val saveButtonTitle = if (isIncome) "Simpan Pemasukan" else "Simpan Pengeluaran"
+
     var amountString by remember { mutableStateOf("0") }
     var selectedCategory by remember(categories) {
-        mutableStateOf(categories.firstOrNull() ?: CategoryEntity("cat_food", "Makan & Minum", "utensils"))
+        val defaultCat = if (isIncome) {
+            categories.firstOrNull() ?: CategoryEntity("inc_salary", "Gaji", "briefcase", type = "income")
+        } else {
+            categories.firstOrNull() ?: CategoryEntity("cat_food", "Makan & Minum", "utensils", type = "expense")
+        }
+        mutableStateOf(defaultCat)
     }
     var note by remember { mutableStateOf("") }
     var selectedDate by remember(initialDate) { mutableStateOf(initialDate ?: Date()) }
@@ -129,7 +141,7 @@ fun AddExpenseSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Tambah Pengeluaran",
+                    text = sheetTitle,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = CharcoalInk
@@ -142,7 +154,7 @@ fun AddExpenseSheet(
                 )
             }
 
-            // Big Amount Display (Hero Input)
+            // Big Amount Display (Hero Input with mode identity)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -154,11 +166,12 @@ fun AddExpenseSheet(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val amountPrefix = if (isIncome && amountLong > 0) "+ " else ""
                     Text(
-                        text = formatRupiah(amountLong),
+                        text = "$amountPrefix${formatRupiah(amountLong)}",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (amountLong > 0) TerracottaPrimary else StoneMuted,
+                        color = if (amountLong > 0) accentColor else StoneMuted,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(6.dp))
@@ -174,7 +187,7 @@ fun AddExpenseSheet(
                         Icon(
                             imageVector = Icons.Default.CalendarMonth,
                             contentDescription = "Pilih Tanggal",
-                            tint = TerracottaPrimary,
+                            tint = accentColor,
                             modifier = Modifier.size(13.dp)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
@@ -213,14 +226,14 @@ fun AddExpenseSheet(
                 item { Spacer(modifier = Modifier.width(12.dp)) }
                 items(categories) { cat ->
                     val isSelected = cat.id == selectedCategory.id
-                    val chipBg = if (isSelected) TerracottaPrimary else CardSurface
+                    val chipBg = if (isSelected) accentColor else CardSurface
                     val chipContentColor = if (isSelected) Color.White else CharcoalInk
 
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .background(chipBg)
-                            .border(1.dp, if (isSelected) TerracottaPrimary else BorderBeige, RoundedCornerShape(20.dp))
+                            .border(1.dp, if (isSelected) accentColor else BorderBeige, RoundedCornerShape(20.dp))
                             .clickable { selectedCategory = cat }
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -246,12 +259,19 @@ fun AddExpenseSheet(
             OutlinedTextField(
                 value = note,
                 onValueChange = { note = it },
-                placeholder = { Text("Catatan singkat (misal: Mie Bangladesh, Kopi)", fontSize = 13.sp, color = StoneMuted) },
+                placeholder = {
+                    Text(
+                        if (isIncome) "Catatan singkat (misal: Transfer gaji, Proyek web)"
+                        else "Catatan singkat (misal: Mie Bangladesh, Kopi)",
+                        fontSize = 13.sp,
+                        color = StoneMuted
+                    )
+                },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = CardSurface,
                     unfocusedContainerColor = CardSurface,
-                    focusedBorderColor = TerracottaPrimary,
+                    focusedBorderColor = accentColor,
                     unfocusedBorderColor = BorderBeige
                 ),
                 shape = RoundedCornerShape(12.dp),
@@ -275,7 +295,7 @@ fun AddExpenseSheet(
                 },
                 enabled = isFormValid,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = TerracottaPrimary,
+                    containerColor = accentColor,
                     contentColor = Color.White,
                     disabledContainerColor = BorderBeige,
                     disabledContentColor = StoneMuted
@@ -287,7 +307,7 @@ fun AddExpenseSheet(
                     .padding(horizontal = 20.dp)
             ) {
                 Text(
-                    text = "Simpan Pengeluaran",
+                    text = saveButtonTitle,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -337,7 +357,7 @@ fun AddExpenseSheet(
                         showDatePicker = false
                     }
                 ) {
-                    Text("Pilih", color = TerracottaPrimary, fontWeight = FontWeight.Bold)
+                    Text("Pilih", color = accentColor, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -349,25 +369,28 @@ fun AddExpenseSheet(
             DatePicker(
                 state = datePickerState,
                 colors = DatePickerDefaults.colors(
-                    selectedDayContainerColor = TerracottaPrimary,
+                    selectedDayContainerColor = accentColor,
                     selectedDayContentColor = Color.White,
-                    todayDateBorderColor = TerracottaPrimary,
-                    todayContentColor = TerracottaPrimary
+                    todayDateBorderColor = accentColor,
+                    todayContentColor = accentColor
                 )
             )
         }
     }
 
     if (showConfirmAddDialog) {
+        val typeLabel = if (isIncome) "pemasukan" else "pengeluaran"
+        val dialogTitle = if (isIncome) "Catat Pemasukan?" else "Catat Pengeluaran?"
+
         AlertDialog(
             onDismissRequest = { showConfirmAddDialog = false },
-            title = { Text("Catat Pengeluaran?", fontWeight = FontWeight.Bold) },
+            title = { Text(dialogTitle, fontWeight = FontWeight.Bold) },
             text = {
                 val formattedAmt = java.text.NumberFormat.getCurrencyInstance(Locale("id", "ID")).apply {
                     maximumFractionDigits = 0
                 }.format(amountLong).replace("Rp", "Rp ")
                 val dateSuffix = if (dateLabel != "Hari ini") " untuk $dateLabel" else ""
-                Text("Catat pengeluaran $formattedAmt untuk kategori \"${selectedCategory.name}\"$dateSuffix?")
+                Text("Catat $typeLabel $formattedAmt untuk kategori \"${selectedCategory.name}\"$dateSuffix?")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -375,9 +398,9 @@ fun AddExpenseSheet(
                     val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
                     sdf.timeZone = TimeZone.getTimeZone("UTC")
                     val isoTimestamp = sdf.format(selectedDate)
-                    onSaveExpense(amountLong, selectedCategory, note.trim(), isoTimestamp)
+                    onSaveExpense(amountLong, selectedCategory, note.trim(), isoTimestamp, mode)
                 }) {
-                    Text("Simpan", color = TerracottaPrimary, fontWeight = FontWeight.Bold)
+                    Text("Simpan", color = accentColor, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

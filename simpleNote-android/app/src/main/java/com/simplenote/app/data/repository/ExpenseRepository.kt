@@ -29,6 +29,8 @@ class ExpenseRepository(
 ) {
     val allExpenses: Flow<List<ExpenseEntity>> = expenseDao.getAllExpenses()
     val allCategories: Flow<List<CategoryEntity>> = categoryDao.getAllCategories()
+    val expenseCategories: Flow<List<CategoryEntity>> = categoryDao.getCategoriesByType("expense")
+    val incomeCategories: Flow<List<CategoryEntity>> = categoryDao.getCategoriesByType("income")
 
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
@@ -59,19 +61,14 @@ class ExpenseRepository(
     suspend fun ensureDefaultCategories() = withContext(Dispatchers.IO) {
         val current = categoryDao.getAllCategories().first()
         if (current.isEmpty()) {
-            val defaults = listOf(
-                CategoryEntity("cat_food", "Makan & Minum", "utensils", true),
-                CategoryEntity("cat_trans", "Transportasi", "car", true),
-                CategoryEntity("cat_shop", "Belanja", "shopping-bag", true),
-                CategoryEntity("cat_fun", "Hiburan", "ticket", true),
-                CategoryEntity("cat_bill", "Tagihan", "receipt", true),
-                CategoryEntity("cat_health", "Kesehatan", "pill", true),
-                CategoryEntity("cat_edu", "Pendidikan", "book", true),
-                CategoryEntity("cat_coffee", "Kopi & Jajan", "coffee", true),
-                CategoryEntity("cat_charity", "Donasi", "heart", true),
-                CategoryEntity("cat_other", "Lainnya", "sparkles", true)
-            )
+            val defaults = com.simplenote.app.data.local.SimpleNoteDatabase.DEFAULT_CATEGORIES +
+                    com.simplenote.app.data.local.SimpleNoteDatabase.DEFAULT_INCOME_CATEGORIES
             categoryDao.insertAll(defaults)
+        } else {
+            val hasIncome = current.any { it.type == "income" }
+            if (!hasIncome) {
+                categoryDao.insertAll(com.simplenote.app.data.local.SimpleNoteDatabase.DEFAULT_INCOME_CATEGORIES)
+            }
         }
     }
 

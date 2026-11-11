@@ -6,6 +6,12 @@ val TerracottaPrimary = Color(0xFFC1440E)
 val TerracottaDark = Color(0xFF983208)
 val TerracottaLight = Color(0xFFFDF6F0)
 
+// Emerald Income Identity (Frontend Design System)
+val EmeraldPrimary = Color(0xFF059669)
+val EmeraldLight = Color(0xFFECFDF5)
+val EmeraldDark = Color(0xFF047857)
+val EmeraldMuted = Color(0xFF065F46)
+
 val PaperBackground = Color(0xFFF8F5F0)
 val CharcoalInk = Color(0xFF1C1917)
 val CardSurface = Color(0xFFFFFFFF)

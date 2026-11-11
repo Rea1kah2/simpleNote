@@ -12,7 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Database(entities = [ExpenseEntity::class, CategoryEntity::class], version = 2, exportSchema = false)
+@Database(entities = [ExpenseEntity::class, CategoryEntity::class], version = 3, exportSchema = false)
 abstract class SimpleNoteDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun categoryDao(): CategoryDao
@@ -27,6 +27,13 @@ abstract class SimpleNoteDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE expenses ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'")
+                db.execSQL("ALTER TABLE categories ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope): SimpleNoteDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -34,7 +41,7 @@ abstract class SimpleNoteDatabase : RoomDatabase() {
                     SimpleNoteDatabase::class.java,
                     "simplenote_db"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .addCallback(DatabaseCallback(scope))
                 .build()
                 INSTANCE = instance
@@ -43,16 +50,26 @@ abstract class SimpleNoteDatabase : RoomDatabase() {
         }
 
         val DEFAULT_CATEGORIES = listOf(
-            CategoryEntity("cat_food", "Makan & Minum", "utensils", isDefault = true),
-            CategoryEntity("cat_trans", "Transportasi", "car", isDefault = true),
-            CategoryEntity("cat_shop", "Belanja", "shopping-bag", isDefault = true),
-            CategoryEntity("cat_bill", "Tagihan", "receipt", isDefault = true),
-            CategoryEntity("cat_fun", "Hiburan", "ticket", isDefault = true),
-            CategoryEntity("cat_coffee", "Kopi & Jajan", "coffee", isDefault = true),
-            CategoryEntity("cat_health", "Kesehatan", "pill", isDefault = true),
-            CategoryEntity("cat_edu", "Pendidikan", "book", isDefault = true),
-            CategoryEntity("cat_charity", "Donasi", "heart", isDefault = true),
-            CategoryEntity("cat_other", "Lainnya", "sparkles", isDefault = true)
+            CategoryEntity("cat_food", "Makan & Minum", "utensils", isDefault = true, type = "expense"),
+            CategoryEntity("cat_trans", "Transportasi", "car", isDefault = true, type = "expense"),
+            CategoryEntity("cat_shop", "Belanja", "shopping-bag", isDefault = true, type = "expense"),
+            CategoryEntity("cat_bill", "Tagihan", "receipt", isDefault = true, type = "expense"),
+            CategoryEntity("cat_fun", "Hiburan", "ticket", isDefault = true, type = "expense"),
+            CategoryEntity("cat_coffee", "Kopi & Jajan", "coffee", isDefault = true, type = "expense"),
+            CategoryEntity("cat_health", "Kesehatan", "pill", isDefault = true, type = "expense"),
+            CategoryEntity("cat_edu", "Pendidikan", "book", isDefault = true, type = "expense"),
+            CategoryEntity("cat_charity", "Donasi", "heart", isDefault = true, type = "expense"),
+            CategoryEntity("cat_other", "Lainnya", "sparkles", isDefault = true, type = "expense")
+        )
+
+        val DEFAULT_INCOME_CATEGORIES = listOf(
+            CategoryEntity("inc_salary", "Gaji", "briefcase", isDefault = true, type = "income"),
+            CategoryEntity("inc_freelance", "Freelance", "zap", isDefault = true, type = "income"),
+            CategoryEntity("inc_bonus", "Bonus", "gift", isDefault = true, type = "income"),
+            CategoryEntity("inc_gift", "Hadiah", "heart", isDefault = true, type = "income"),
+            CategoryEntity("inc_business", "Usaha", "home", isDefault = true, type = "income"),
+            CategoryEntity("inc_invest", "Investasi", "wallet", isDefault = true, type = "income"),
+            CategoryEntity("inc_other", "Lainnya", "sparkles", isDefault = true, type = "income")
         )
 
         private class DatabaseCallback(
@@ -62,7 +79,7 @@ abstract class SimpleNoteDatabase : RoomDatabase() {
                 super.onCreate(db)
                 INSTANCE?.let { database ->
                     scope.launch(Dispatchers.IO) {
-                        database.categoryDao().insertAll(DEFAULT_CATEGORIES)
+                        database.categoryDao().insertAll(DEFAULT_CATEGORIES + DEFAULT_INCOME_CATEGORIES)
                     }
                 }
             }

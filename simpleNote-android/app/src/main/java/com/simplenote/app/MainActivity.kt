@@ -143,6 +143,7 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                     TodayScreen(
                         expenses = expenses,
                         onAddExpenseClick = { viewModel.openAddExpense() },
+                        onAddIncomeClick = { viewModel.openAddIncome() },
                         onExpenseClick = { viewModel.editingExpense.value = it }
                     )
                 }
@@ -151,8 +152,12 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                         expenses = expenses,
                         categories = categories,
                         onExpenseClick = { viewModel.editingExpense.value = it },
-                        onAddExpenseForDate = { date ->
-                            viewModel.openAddExpense(date)
+                        onAddExpenseForDate = { date, type ->
+                            if (type == "income") {
+                                viewModel.openAddIncome(date)
+                            } else {
+                                viewModel.openAddExpense(date)
+                            }
                         }
                     )
                 }
@@ -194,24 +199,35 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
             )
         }
 
-        // Add Expense Sheet
+        // Add Transaction Sheet (Expense or Income)
         if (isAddSheetOpen) {
             val targetAddDate by viewModel.targetAddDate.collectAsState()
+            val addMode by viewModel.addMode.collectAsState()
+            val expenseCategories by viewModel.expenseCategories.collectAsState()
+            val incomeCategories by viewModel.incomeCategories.collectAsState()
+            val activeCategories = if (addMode == "income") incomeCategories else expenseCategories
+
             AddExpenseSheet(
-                categories = categories,
+                categories = activeCategories,
+                mode = addMode,
                 initialDate = targetAddDate,
                 onDismiss = { viewModel.closeAddExpense() },
-                onSaveExpense = { amount, category, note, timestamp ->
-                    viewModel.addExpense(amount, category, note, timestamp)
+                onSaveExpense = { amount, category, note, timestamp, type ->
+                    viewModel.addExpense(amount, category, note, timestamp, type)
                 }
             )
         }
 
         // Edit Expense Sheet
         editingExpense?.let { expenseToEdit ->
+            val relevantCategories = if (expenseToEdit.type == "income") {
+                categories.filter { it.type == "income" }
+            } else {
+                categories.filter { it.type != "income" }
+            }
             EditExpenseSheet(
                 expense = expenseToEdit,
-                categories = categories,
+                categories = relevantCategories.ifEmpty { categories },
                 onDismiss = { viewModel.editingExpense.value = null },
                 onSaveEdit = { updated ->
                     viewModel.updateExpense(updated)

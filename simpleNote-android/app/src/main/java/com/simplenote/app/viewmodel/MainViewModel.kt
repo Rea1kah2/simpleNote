@@ -28,6 +28,12 @@ class MainViewModel(
     val categories: StateFlow<List<CategoryEntity>> = repository.allCategories
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val expenseCategories: StateFlow<List<CategoryEntity>> = repository.expenseCategories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val incomeCategories: StateFlow<List<CategoryEntity>> = repository.incomeCategories
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val _toast = MutableStateFlow<ToastMessage?>(null)
     val toast: StateFlow<ToastMessage?> = _toast.asStateFlow()
 
@@ -35,10 +41,18 @@ class MainViewModel(
 
     var editingExpense = MutableStateFlow<ExpenseEntity?>(null)
     var isAddSheetOpen = MutableStateFlow(false)
+    var addMode = MutableStateFlow("expense") // "expense" | "income"
     var targetAddDate = MutableStateFlow<Date?>(null)
     var isCategoryManagerOpen = MutableStateFlow(false)
 
     fun openAddExpense(date: Date? = null) {
+        addMode.value = "expense"
+        targetAddDate.value = date
+        isAddSheetOpen.value = true
+    }
+
+    fun openAddIncome(date: Date? = null) {
+        addMode.value = "income"
         targetAddDate.value = date
         isAddSheetOpen.value = true
     }
@@ -79,7 +93,7 @@ class MainViewModel(
         isAutoSyncEnabled.value = enabled
     }
 
-    fun addExpense(amount: Long, category: CategoryEntity, note: String, timestamp: String) {
+    fun addExpense(amount: Long, category: CategoryEntity, note: String, timestamp: String, type: String = "expense") {
         viewModelScope.launch {
             val entity = ExpenseEntity(
                 amount = amount,
@@ -87,11 +101,13 @@ class MainViewModel(
                 timestamp = timestamp,
                 categoryId = category.id,
                 categoryName = category.name,
-                categoryIcon = category.icon
+                categoryIcon = category.icon,
+                type = type
             )
             repository.insertExpense(entity)
             closeAddExpense()
-            showToast(ToastType.SUCCESS, "Pengeluaran Dicatat", "${category.name} - Rp $amount")
+            val label = if (type == "income") "Pemasukan Dicatat" else "Pengeluaran Dicatat"
+            showToast(ToastType.SUCCESS, label, "${category.name} - Rp $amount")
 
             // If auto-sync is on, push update in background
             if (isAutoSyncEnabled.value && cloudUrl.value.isNotBlank()) {
@@ -124,13 +140,15 @@ class MainViewModel(
         }
     }
 
-    fun addCategory(name: String, icon: String) {
+    fun addCategory(name: String, icon: String, type: String = "expense") {
         viewModelScope.launch {
+            val prefix = if (type == "income") "inc_custom_" else "cat_custom_"
             val newCat = CategoryEntity(
-                id = "cat_custom_" + System.currentTimeMillis(),
+                id = prefix + System.currentTimeMillis(),
                 name = name,
                 icon = icon,
-                isDefault = false
+                isDefault = false,
+                type = type
             )
             repository.insertCategory(newCat)
             showToast(ToastType.SUCCESS, "Kategori Ditambahkan", "Kategori \"$name\" siap digunakan")

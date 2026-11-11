@@ -9,5 +9,6 @@ data class CategoryEntity(
     val id: String,
     val name: String,
     val icon: String = "sparkles",
-    val isDefault: Boolean = false
+    val isDefault: Boolean = false,
+    val type: String = "expense"
 )

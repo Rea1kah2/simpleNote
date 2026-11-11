@@ -10,6 +10,10 @@
   --sn-ink-sec: #78716C;
   --sn-accent: #C1440E;
   --sn-accent-soft: #FEF3EE;
+  --sn-income: #059669;
+  --sn-income-light: #ECFDF5;
+  --sn-income-dark: #047857;
+  --sn-income-muted: #065F46;
   --sn-border: #E8E0D8;
   --sn-bar: #D97706;
   --sn-radius-sm: 8px;
@@ -1738,4 +1742,250 @@ input {
   font-weight: 600;
   color: var(--sn-accent);
   margin-top: 1px;
+}
+
+/* ==========================================================================
+   INCOME FEATURE & SEGMENTED FOCUS CONTROLS
+   ========================================================================== */
+
+/* Hero Net Balance Details */
+.hero-sublabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sn-ink-sec);
+  margin-top: 6px;
+}
+
+.hero-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.hero-breakdown-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.breakdown-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.breakdown-dot.income-dot {
+  background-color: var(--sn-income);
+}
+
+.breakdown-dot.expense-dot {
+  background-color: var(--sn-accent);
+}
+
+.breakdown-label {
+  color: var(--sn-ink-sec);
+}
+
+.breakdown-value {
+  font-weight: 700;
+}
+
+.income-item .breakdown-value {
+  color: var(--sn-income-dark);
+}
+
+.expense-item .breakdown-value {
+  color: var(--sn-accent);
+}
+
+/* Segmented Control Pill (Keluar / Masuk) */
+.mode-switcher-pill {
+  display: flex;
+  background: var(--sn-surface);
+  border: 1px solid var(--sn-border);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 4px;
+  margin: 0 16px 14px 16px;
+}
+
+.mode-pill {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sn-ink-sec);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-pill.active-expense {
+  background: var(--sn-accent);
+  color: #FFFFFF;
+}
+
+.mode-pill.active-income {
+  background: var(--sn-income);
+  color: #FFFFFF;
+}
+
+.mode-count {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+/* History Type Switcher */
+.history-type-switcher {
+  display: flex;
+  background: var(--sn-surface);
+  border: 1px solid var(--sn-border);
+  border-radius: 12px;
+  padding: 3px;
+  gap: 4px;
+  margin: 0 16px 10px 16px;
+}
+
+.hist-type-pill {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sn-ink-sec);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hist-type-pill.active-expense {
+  background: var(--sn-accent);
+  color: #FFFFFF;
+}
+
+.hist-type-pill.active-income {
+  background: var(--sn-income);
+  color: #FFFFFF;
+}
+
+.hist-type-pill.active-all {
+  background: var(--sn-ink);
+  color: #FFFFFF;
+}
+
+/* Stats Balance Card */
+.stats-balance-card {
+  background: var(--sn-surface);
+  border: 1px solid var(--sn-border);
+  border-radius: var(--sn-radius-md);
+  padding: 16px;
+  margin: 0 16px 14px 16px;
+}
+
+.stats-balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.stats-balance-row.net-row {
+  margin-top: 10px;
+}
+
+.balance-label {
+  font-size: 13px;
+  color: var(--sn-ink-sec);
+}
+
+.balance-label.bold {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sn-ink);
+}
+
+.balance-val {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.balance-val.income-val {
+  color: var(--sn-income-dark);
+}
+
+.balance-val.expense-val {
+  color: var(--sn-accent);
+}
+
+.balance-val.net-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--sn-income);
+}
+
+.balance-val.net-val.negative {
+  color: var(--sn-accent);
+}
+
+.stats-balance-divider {
+  height: 1px;
+  background: var(--sn-border);
+  margin-top: 10px;
+}
+
+.stats-switcher-pill {
+  margin-top: 0;
+}
+
+/* Income Row Card Styles */
+.expense-row.income-row {
+  border-left: 3.5px solid var(--sn-income);
+  border-color: rgba(5, 150, 105, 0.25) rgba(5, 150, 105, 0.25) rgba(5, 150, 105, 0.25) var(--sn-income);
+}
+
+.expense-row.income-row .expense-amount {
+  color: var(--sn-income);
+  font-weight: 700;
+}
+
+.expense-row.income-row .expense-svg-icon {
+  background: var(--sn-income-light);
+  color: var(--sn-income);
+}
+
+.expense-row.income-row .expense-edited {
+  color: var(--sn-income);
+}
+
+/* Income FAB */
+.fab-btn.income-mode {
+  background: var(--sn-income);
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+}
+
+/* Modal Income Mode Styling */
+.modal-sheet.income-mode .sheet-hero-amount {
+  color: var(--sn-income);
+}
+
+.modal-sheet.income-mode .date-badge-btn {
+  color: var(--sn-income);
+}
+
+.modal-sheet.income-mode .sheet-save-btn {
+  background: var(--sn-income);
+}
+
+.modal-sheet.income-mode .chip-btn.selected {
+  background: var(--sn-income);
+  border-color: var(--sn-income);
+  color: #fff;
 }
