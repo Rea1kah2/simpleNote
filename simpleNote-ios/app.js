@@ -2713,12 +2713,38 @@ function saveEditedExpense() {
 // CATEGORY MANAGER MODAL (With SVG Icon Picker)
 // ==========================================================================
 let selectedNewCatIcon = 'sparkles';
+let catManagerActiveTab = 'expense';
 
 function setupCategoryManagerModal() {
   const modal = document.getElementById('modal-cat-manager');
   const preview = document.getElementById('selected-cat-icon-preview');
   const pickerGrid = document.getElementById('icon-picker-grid');
   const selectBtn = document.getElementById('btn-select-cat-icon');
+
+  const tabExpense = document.getElementById('cat-manager-tab-expense');
+  const tabIncome = document.getElementById('cat-manager-tab-income');
+
+  if (tabExpense && tabIncome) {
+    tabExpense.addEventListener('click', () => {
+      triggerHaptic();
+      catManagerActiveTab = 'expense';
+      tabExpense.classList.add('active');
+      tabIncome.classList.remove('active');
+      const input = document.getElementById('new-cat-name');
+      if (input) input.placeholder = 'Nama Kategori Pengeluaran...';
+      renderCategoryManagerList();
+    });
+
+    tabIncome.addEventListener('click', () => {
+      triggerHaptic();
+      catManagerActiveTab = 'income';
+      tabIncome.classList.add('active');
+      tabExpense.classList.remove('active');
+      const input = document.getElementById('new-cat-name');
+      if (input) input.placeholder = 'Nama Kategori Pemasukan...';
+      renderCategoryManagerList();
+    });
+  }
 
   if (preview) preview.innerHTML = renderSvgIcon(selectedNewCatIcon, 20);
 
@@ -2767,11 +2793,13 @@ function setupCategoryManagerModal() {
     const name = document.getElementById('new-cat-name').value.trim();
     if (!name) return;
 
+    const prefix = catManagerActiveTab === 'income' ? 'inc_custom_' : 'cat_custom_';
     const newCat = {
-      id: 'cat_custom_' + Date.now(),
+      id: prefix + Date.now(),
       name: name,
       icon: selectedNewCatIcon,
-      isDefault: false
+      isDefault: false,
+      type: catManagerActiveTab
     };
 
     state.categories.push(newCat);
@@ -2785,7 +2813,7 @@ function setupCategoryManagerModal() {
     showToast({
       type: 'success',
       title: 'Kategori Ditambahkan',
-      message: `Kategori "${name}" siap digunakan`
+      message: `Kategori "${name}" (${catManagerActiveTab === 'income' ? 'Pemasukan' : 'Pengeluaran'}) siap digunakan`
     });
   });
 }
@@ -2799,11 +2827,30 @@ function renderCategoryManagerList() {
   const list = document.getElementById('categories-manager-list');
   list.innerHTML = '';
 
-  state.categories.forEach((cat) => {
+  const isIncome = catManagerActiveTab === 'income';
+  const displayedCategories = state.categories.filter((cat) => {
+    return isIncome ? cat.type === 'income' : cat.type !== 'income';
+  });
+
+  if (displayedCategories.length === 0) {
+    const emptyRow = document.createElement('div');
+    emptyRow.style.padding = '16px';
+    emptyRow.style.textAlign = 'center';
+    emptyRow.style.color = '#78716C';
+    emptyRow.style.fontSize = '13px';
+    emptyRow.textContent = isIncome
+      ? 'Belum ada kategori pemasukan. Tambahkan kategori baru di atas.'
+      : 'Belum ada kategori pengeluaran. Tambahkan kategori baru di atas.';
+    list.appendChild(emptyRow);
+    return;
+  }
+
+  displayedCategories.forEach((cat) => {
     const row = document.createElement('div');
     row.className = 'manager-cat-row';
+    const accentColor = isIncome ? 'var(--emerald-primary, #059669)' : 'var(--terracotta-primary, #C85A32)';
     row.innerHTML = `
-      <span class="chip-svg-icon" style="width:24px; height:24px; margin-right:10px;">${getCategoryIcon(cat, 20)}</span>
+      <span class="chip-svg-icon" style="width:24px; height:24px; margin-right:10px; color:${accentColor};">${getCategoryIcon(cat, 20)}</span>
       <span style="flex:1; font-weight:500;">${escapeHtml(cat.name)}</span>
       ${cat.isDefault ? `<span style="font-size:11px; color:#78716C;">Bawaan</span>` : `<button class="del-cat-btn">Hapus</button>`}
     `;

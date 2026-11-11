@@ -31,6 +31,9 @@ abstract class SimpleNoteDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE expenses ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'")
                 db.execSQL("ALTER TABLE categories ADD COLUMN type TEXT NOT NULL DEFAULT 'expense'")
+                DEFAULT_INCOME_CATEGORIES.forEach { cat ->
+                    db.execSQL("INSERT OR IGNORE INTO categories (id, name, icon, isDefault, type) VALUES ('${cat.id}', '${cat.name}', '${cat.icon}', 1, 'income')")
+                }
             }
         }
 
@@ -42,6 +45,7 @@ abstract class SimpleNoteDatabase : RoomDatabase() {
                     "simplenote_db"
                 )
                 .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .fallbackToDestructiveMigrationOnDowngrade()
                 .addCallback(DatabaseCallback(scope))
                 .build()
                 INSTANCE = instance

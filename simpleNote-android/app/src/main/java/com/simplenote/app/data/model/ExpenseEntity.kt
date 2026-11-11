@@ -1,5 +1,6 @@
 package com.simplenote.app.data.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.text.SimpleDateFormat
@@ -19,6 +20,7 @@ data class ExpenseEntity(
     val categoryName: String,
     val categoryIcon: String = "sparkles",
     val updatedAt: String? = null,
+    @ColumnInfo(defaultValue = "expense")
     val type: String = "expense"
 ) {
     fun parsedDate(): Date? = parseUtcIso(timestamp)

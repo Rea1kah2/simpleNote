@@ -1,5 +1,6 @@
 package com.simplenote.app.data.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -10,5 +11,6 @@ data class CategoryEntity(
     val name: String,
     val icon: String = "sparkles",
     val isDefault: Boolean = false,
+    @ColumnInfo(defaultValue = "expense")
     val type: String = "expense"
 )

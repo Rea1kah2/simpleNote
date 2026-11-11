@@ -50,6 +50,7 @@ import com.simplenote.app.ui.theme.BorderBeige
 import com.simplenote.app.ui.theme.CardSurface
 import com.simplenote.app.ui.theme.CharcoalInk
 import com.simplenote.app.ui.theme.DangerRed
+import com.simplenote.app.ui.theme.EmeraldPrimary
 import com.simplenote.app.ui.theme.PaperBackground
 import com.simplenote.app.ui.theme.StoneMuted
 import com.simplenote.app.ui.theme.TerracottaPrimary
@@ -58,12 +59,20 @@ import com.simplenote.app.ui.theme.TerracottaPrimary
 fun CategoryManagerDialog(
     categories: List<CategoryEntity>,
     onDismiss: () -> Unit,
-    onAddCategory: (name: String, icon: String) -> Unit,
+    onAddCategory: (name: String, icon: String, type: String) -> Unit,
     onDeleteCategory: (CategoryEntity) -> Unit
 ) {
+    var activeTab by remember { mutableStateOf("expense") } // "expense" | "income"
     var newCatName by remember { mutableStateOf("") }
     var selectedIcon by remember { mutableStateOf("sparkles") }
     var showIconPicker by remember { mutableStateOf(false) }
+
+    val isIncome = activeTab == "income"
+    val primaryColor = if (isIncome) EmeraldPrimary else TerracottaPrimary
+
+    val expenseCategories = remember(categories) { categories.filter { it.type != "income" } }
+    val incomeCategories = remember(categories) { categories.filter { it.type == "income" } }
+    val displayedCategories = if (isIncome) incomeCategories else expenseCategories
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -71,7 +80,7 @@ fun CategoryManagerDialog(
             colors = CardDefaults.cardColors(containerColor = PaperBackground),
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)
+                .fillMaxHeight(0.88f)
         ) {
             Column(
                 modifier = Modifier
@@ -92,6 +101,60 @@ fun CategoryManagerDialog(
                     )
                     IconButton(onClick = onDismiss) {
                         Icon(imageVector = Icons.Default.Close, contentDescription = "Tutup", tint = StoneMuted)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Segmented Switcher: Pengeluaran / Pemasukan
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CardSurface)
+                        .border(1.dp, BorderBeige, RoundedCornerShape(12.dp))
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val isExpenseSelected = !isIncome
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(if (isExpenseSelected) TerracottaPrimary else Color.Transparent)
+                            .clickable {
+                                activeTab = "expense"
+                                showIconPicker = false
+                            }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Pengeluaran (${expenseCategories.size})",
+                            fontSize = 12.sp,
+                            fontWeight = if (isExpenseSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isExpenseSelected) Color.White else StoneMuted
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(if (isIncome) EmeraldPrimary else Color.Transparent)
+                            .clickable {
+                                activeTab = "income"
+                                showIconPicker = false
+                            }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Pemasukan (${incomeCategories.size})",
+                            fontSize = 12.sp,
+                            fontWeight = if (isIncome) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isIncome) Color.White else StoneMuted
+                        )
                     }
                 }
 
@@ -119,7 +182,7 @@ fun CategoryManagerDialog(
                                     .clickable { showIconPicker = !showIconPicker },
                                 contentAlignment = Alignment.Center
                             ) {
-                                AppIcon(name = selectedIcon, tint = TerracottaPrimary, modifier = Modifier.size(22.dp))
+                                AppIcon(name = selectedIcon, tint = primaryColor, modifier = Modifier.size(22.dp))
                             }
 
                             Spacer(modifier = Modifier.width(8.dp))
@@ -127,13 +190,19 @@ fun CategoryManagerDialog(
                             OutlinedTextField(
                                 value = newCatName,
                                 onValueChange = { newCatName = it },
-                                placeholder = { Text("Nama Kategori...", fontSize = 13.sp, color = StoneMuted) },
+                                placeholder = {
+                                    Text(
+                                        if (isIncome) "Nama Kategori Masuk..." else "Nama Kategori Keluar...",
+                                        fontSize = 13.sp,
+                                        color = StoneMuted
+                                    )
+                                },
                                 singleLine = true,
                                 shape = RoundedCornerShape(10.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = CardSurface,
                                     unfocusedContainerColor = CardSurface,
-                                    focusedBorderColor = TerracottaPrimary,
+                                    focusedBorderColor = primaryColor,
                                     unfocusedBorderColor = BorderBeige
                                 ),
                                 modifier = Modifier.weight(1f)
@@ -144,13 +213,13 @@ fun CategoryManagerDialog(
                             Button(
                                 onClick = {
                                     if (newCatName.isNotBlank()) {
-                                        onAddCategory(newCatName.trim(), selectedIcon)
+                                        onAddCategory(newCatName.trim(), selectedIcon, activeTab)
                                         newCatName = ""
                                         showIconPicker = false
                                     }
                                 },
                                 enabled = newCatName.isNotBlank(),
-                                colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary),
+                                colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 Text("Tambah", fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -176,8 +245,8 @@ fun CategoryManagerDialog(
                                         modifier = Modifier
                                             .size(36.dp)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) TerracottaPrimary.copy(alpha = 0.15f) else PaperBackground)
-                                            .border(1.dp, if (isSelected) TerracottaPrimary else BorderBeige, RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) primaryColor.copy(alpha = 0.15f) else PaperBackground)
+                                            .border(1.dp, if (isSelected) primaryColor else BorderBeige, RoundedCornerShape(8.dp))
                                             .clickable {
                                                 selectedIcon = iconName
                                                 showIconPicker = false
@@ -186,7 +255,7 @@ fun CategoryManagerDialog(
                                     ) {
                                         AppIcon(
                                             name = iconName,
-                                            tint = if (isSelected) TerracottaPrimary else CharcoalInk,
+                                            tint = if (isSelected) primaryColor else CharcoalInk,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -196,9 +265,9 @@ fun CategoryManagerDialog(
                     }
                 }
 
-                // Category List
+                // Category List Header
                 Text(
-                    text = "DAFTAR KATEGORI",
+                    text = if (isIncome) "DAFTAR KATEGORI PEMASUKAN" else "DAFTAR KATEGORI PENGELUARAN",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = StoneMuted,
@@ -211,7 +280,7 @@ fun CategoryManagerDialog(
                         .weight(1f),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(categories) { cat ->
+                    items(displayedCategories, key = { it.id }) { cat ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -221,7 +290,7 @@ fun CategoryManagerDialog(
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            AppIcon(name = cat.icon, tint = TerracottaPrimary, modifier = Modifier.size(20.dp))
+                            AppIcon(name = cat.icon, tint = primaryColor, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = cat.name,

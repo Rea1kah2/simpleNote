@@ -96,11 +96,15 @@ class ExpenseRepository(
             val expensesType = object : com.google.gson.reflect.TypeToken<List<ExpenseEntity>>() {}.type
             val importedExpenses: List<ExpenseEntity>? = gson.fromJson(jsonObject.get("expenses"), expensesType)
 
+            var importedCategories: List<CategoryEntity>? = null
             if (jsonObject.has("categories")) {
                 val categoriesType = object : com.google.gson.reflect.TypeToken<List<CategoryEntity>>() {}.type
-                val importedCategories: List<CategoryEntity>? = gson.fromJson(jsonObject.get("categories"), categoriesType)
+                importedCategories = gson.fromJson(jsonObject.get("categories"), categoriesType)
                 if (!importedCategories.isNullOrEmpty()) {
-                    categoryDao.insertAll(importedCategories)
+                    val sanitizedCats = importedCategories.map { cat ->
+                        if (cat.type.isNullOrBlank()) cat.copy(type = "expense") else cat
+                    }
+                    categoryDao.insertAll(sanitizedCats)
                 }
             }
 
@@ -108,8 +112,12 @@ class ExpenseRepository(
                 return@withContext Result.failure(Exception("File cadangan tidak berisi pengeluaran"))
             }
 
-            expenseDao.insertAll(importedExpenses)
-            Result.success(importedExpenses.size)
+            val sanitizedExpenses = importedExpenses.map { exp ->
+                if (exp.type.isNullOrBlank()) exp.copy(type = "expense") else exp
+            }
+
+            expenseDao.insertAll(sanitizedExpenses)
+            Result.success(sanitizedExpenses.size)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -173,7 +181,10 @@ class ExpenseRepository(
 
                 val jsonObject = gson.fromJson(response, JsonObject::class.java)
                 val expensesType = object : com.google.gson.reflect.TypeToken<List<ExpenseEntity>>() {}.type
-                val serverExpenses: List<ExpenseEntity> = gson.fromJson(jsonObject.get("expenses"), expensesType) ?: emptyList()
+                val rawServerExpenses: List<ExpenseEntity> = gson.fromJson(jsonObject.get("expenses"), expensesType) ?: emptyList()
+                val serverExpenses = rawServerExpenses.map { exp ->
+                    if (exp.type.isNullOrBlank()) exp.copy(type = "expense") else exp
+                }
 
                 val localExpenses = allExpenses.first()
                 if (serverExpenses.isEmpty() && localExpenses.isNotEmpty()) {
@@ -191,7 +202,10 @@ class ExpenseRepository(
                         val categoriesType = object : com.google.gson.reflect.TypeToken<List<CategoryEntity>>() {}.type
                         val serverCats: List<CategoryEntity>? = gson.fromJson(jsonObject.get("categories"), categoriesType)
                         if (!serverCats.isNullOrEmpty()) {
-                            categoryDao.insertAll(serverCats)
+                            val sanitizedCats = serverCats.map { cat ->
+                                if (cat.type.isNullOrBlank()) cat.copy(type = "expense") else cat
+                            }
+                            categoryDao.insertAll(sanitizedCats)
                         }
                     }
 

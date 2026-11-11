@@ -243,8 +243,8 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
             CategoryManagerDialog(
                 categories = categories,
                 onDismiss = { viewModel.isCategoryManagerOpen.value = false },
-                onAddCategory = { name, icon ->
-                    viewModel.addCategory(name, icon)
+                onAddCategory = { name, icon, type ->
+                    viewModel.addCategory(name, icon, type)
                 },
                 onDeleteCategory = { cat ->
                     viewModel.deleteCategory(cat)

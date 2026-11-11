@@ -46,6 +46,7 @@ import com.simplenote.app.ui.theme.BorderBeige
 import com.simplenote.app.ui.theme.CardSurface
 import com.simplenote.app.ui.theme.CharcoalInk
 import com.simplenote.app.ui.theme.DangerRed
+import com.simplenote.app.ui.theme.EmeraldPrimary
 import com.simplenote.app.ui.theme.PaperBackground
 import com.simplenote.app.ui.theme.StoneMuted
 import com.simplenote.app.ui.theme.TerracottaPrimary
@@ -65,11 +66,14 @@ fun EditExpenseSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val isIncome = expense.type == "income"
+    val primaryColor = if (isIncome) EmeraldPrimary else TerracottaPrimary
+
     var amountString by remember { mutableStateOf(expense.amount.toString()) }
     var selectedCategory by remember(categories) {
         mutableStateOf(
             categories.find { it.id == expense.categoryId }
-                ?: CategoryEntity(expense.categoryId, expense.categoryName, expense.categoryIcon)
+                ?: CategoryEntity(expense.categoryId, expense.categoryName, expense.categoryIcon, isDefault = false, type = expense.type)
         )
     }
     var selectedIcon by remember { mutableStateOf(expense.categoryIcon) }
@@ -132,7 +136,7 @@ fun EditExpenseSheet(
             ) {
                 Column {
                     Text(
-                        text = "Ubah Catatan",
+                        text = if (isIncome) "Ubah Pemasukan" else "Ubah Pengeluaran",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = CharcoalInk
@@ -149,7 +153,7 @@ fun EditExpenseSheet(
                             text = "Diedit: $updatedTimeString",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = TerracottaPrimary
+                            color = primaryColor
                         )
                     }
                 }
@@ -172,18 +176,19 @@ fun EditExpenseSheet(
                     .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
+                val amountPrefix = if (isIncome && amountLong > 0) "+ " else ""
                 Text(
-                    text = formatRupiah(amountLong),
+                    text = "$amountPrefix${formatRupiah(amountLong)}",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (amountLong > 0) TerracottaPrimary else StoneMuted,
+                    color = if (amountLong > 0) primaryColor else StoneMuted,
                     textAlign = TextAlign.Center
                 )
             }
 
             // Category Chips
             Text(
-                text = "KATEGORI",
+                text = if (isIncome) "KATEGORI PEMASUKAN" else "KATEGORI PENGELUARAN",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = StoneMuted,
@@ -199,14 +204,14 @@ fun EditExpenseSheet(
                 item { Spacer(modifier = Modifier.width(12.dp)) }
                 items(categories) { cat ->
                     val isSelected = cat.id == selectedCategory.id
-                    val chipBg = if (isSelected) TerracottaPrimary else CardSurface
+                    val chipBg = if (isSelected) primaryColor else CardSurface
                     val chipContentColor = if (isSelected) Color.White else CharcoalInk
 
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .background(chipBg)
-                            .border(1.dp, if (isSelected) TerracottaPrimary else BorderBeige, RoundedCornerShape(20.dp))
+                            .border(1.dp, if (isSelected) primaryColor else BorderBeige, RoundedCornerShape(20.dp))
                             .clickable {
                                 selectedCategory = cat
                                 selectedIcon = cat.icon
@@ -240,7 +245,7 @@ fun EditExpenseSheet(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = CardSurface,
                     unfocusedContainerColor = CardSurface,
-                    focusedBorderColor = TerracottaPrimary,
+                    focusedBorderColor = primaryColor,
                     unfocusedBorderColor = BorderBeige
                 ),
                 shape = RoundedCornerShape(12.dp),
@@ -282,7 +287,7 @@ fun EditExpenseSheet(
                     },
                     enabled = isFormValid,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = TerracottaPrimary,
+                        containerColor = primaryColor,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(14.dp),
@@ -315,11 +320,12 @@ fun EditExpenseSheet(
                         categoryName = selectedCategory.name,
                         categoryIcon = selectedIcon,
                         note = note.trim(),
-                        updatedAt = nowIso
+                        updatedAt = nowIso,
+                        type = expense.type
                     )
                     onSaveEdit(updated)
                 }) {
-                    Text("Simpan", color = TerracottaPrimary, fontWeight = FontWeight.Bold)
+                    Text("Simpan", color = primaryColor, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
