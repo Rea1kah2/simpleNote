@@ -69,7 +69,79 @@ input {
   padding-left: 20px;
   padding-right: 20px;
   background: var(--sn-canvas);
+  border-bottom: 1px solid rgba(220, 214, 203, 0.4);
   z-index: 10;
+}
+
+.header-content-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--sn-ink);
+  margin: 0;
+}
+
+.global-section-switcher {
+  display: flex;
+  background: var(--sn-surface);
+  border: 1px solid var(--sn-border);
+  border-radius: 20px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.section-switch-btn {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sn-stone-muted);
+  padding: 5px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.section-switch-btn.active[data-section="expense"],
+.section-switch-btn.active#btn-section-expense {
+  background: var(--terracotta-primary, #C85A32);
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.section-switch-btn.active[data-section="income"],
+.section-switch-btn.active#btn-section-income {
+  background: var(--emerald-primary, #059669);
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+/* Income Specific Styles */
+.income-tag {
+  color: var(--emerald-primary, #059669) !important;
+}
+
+.income-amount {
+  color: var(--emerald-primary, #059669) !important;
+}
+
+.income-signature-bar {
+  background: var(--emerald-primary, #059669) !important;
+}
+
+.fab-income {
+  background: var(--emerald-primary, #059669) !important;
+}
+
+.fab-income:hover {
+  background: var(--emerald-dark, #047857) !important;
 }
 
 .screen-title {

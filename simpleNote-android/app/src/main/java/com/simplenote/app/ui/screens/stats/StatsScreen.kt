@@ -2,7 +2,6 @@ package com.simplenote.app.ui.screens.stats
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,11 +47,8 @@ import com.simplenote.app.ui.screens.today.ExpenseRowCard
 import com.simplenote.app.ui.theme.BorderBeige
 import com.simplenote.app.ui.theme.CardSurface
 import com.simplenote.app.ui.theme.CharcoalInk
-import com.simplenote.app.ui.theme.EmeraldDark
-import com.simplenote.app.ui.theme.EmeraldPrimary
 import com.simplenote.app.ui.theme.PaperBackground
 import com.simplenote.app.ui.theme.StoneMuted
-import com.simplenote.app.ui.theme.TerracottaDark
 import com.simplenote.app.ui.theme.TerracottaPrimary
 import com.simplenote.app.ui.theme.WarmChartPalette
 import java.text.SimpleDateFormat
@@ -67,7 +62,6 @@ fun StatsScreen(
     onExpenseClick: (ExpenseEntity) -> Unit
 ) {
     var statsMonth by remember { mutableStateOf(Date()) }
-    var statsMode by remember { mutableStateOf("expense") } // "expense" | "income"
 
     val cal = Calendar.getInstance().apply { time = statsMonth }
     val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
@@ -76,32 +70,26 @@ fun StatsScreen(
         SimpleDateFormat("MMMM yyyy", Locale("id", "ID")).format(statsMonth)
     }
 
-    val monthlyAll = remember(expenses, statsMonth) {
+    val monthlyExpenses = remember(expenses, statsMonth) {
         val y = cal.get(Calendar.YEAR)
         val m = cal.get(Calendar.MONTH)
         expenses.filter { exp ->
-            val d = exp.parsedDate()
-            if (d != null) {
-                val c = Calendar.getInstance().apply { time = d }
-                c.get(Calendar.YEAR) == y && c.get(Calendar.MONTH) == m
+            if (exp.type != "income") {
+                val d = exp.parsedDate()
+                if (d != null) {
+                    val c = Calendar.getInstance().apply { time = d }
+                    c.get(Calendar.YEAR) == y && c.get(Calendar.MONTH) == m
+                } else false
             } else false
         }
     }
 
-    val monthlyExpenses = remember(monthlyAll) { monthlyAll.filter { it.type != "income" } }
-    val monthlyIncomes = remember(monthlyAll) { monthlyAll.filter { it.type == "income" } }
-
     val totalExpense = remember(monthlyExpenses) { monthlyExpenses.sumOf { it.amount } }
-    val totalIncome = remember(monthlyIncomes) { monthlyIncomes.sumOf { it.amount } }
-    val netSaldo = remember(totalIncome, totalExpense) { totalIncome - totalExpense }
+    val avgDaily = remember(totalExpense, daysInMonth) { if (totalExpense > 0) totalExpense / daysInMonth else 0L }
 
-    val activeList = if (statsMode == "income") monthlyIncomes else monthlyExpenses
-    val totalActive = if (statsMode == "income") totalIncome else totalExpense
-    val avgDaily = remember(totalActive, daysInMonth) { if (totalActive > 0) totalActive / daysInMonth else 0L }
-
-    val categoryStats = remember(activeList) {
+    val categoryStats = remember(monthlyExpenses) {
         val map = mutableMapOf<String, Pair<String, Long>>()
-        activeList.forEach { exp ->
+        monthlyExpenses.forEach { exp ->
             val current = map[exp.categoryName]
             val newAmount = (current?.second ?: 0L) + exp.amount
             map[exp.categoryName] = exp.categoryIcon to newAmount
@@ -166,139 +154,6 @@ fun StatsScreen(
             }
         }
 
-        // Ringkasan Saldo Bulan Ini (Balance Header Card)
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardSurface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderBeige),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Text(
-                        text = "RINGKASAN SALDO BULAN INI",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StoneMuted,
-                        letterSpacing = 0.5.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = "Pemasukan", fontSize = 13.sp, color = StoneMuted)
-                        Text(
-                            text = "+ ${formatRupiah(totalIncome)}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = EmeraldDark
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = "Pengeluaran", fontSize = 13.sp, color = StoneMuted)
-                        Text(
-                            text = "- ${formatRupiah(totalExpense)}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TerracottaDark
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(BorderBeige)
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = "Saldo Bersih", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CharcoalInk)
-                        val netPrefix = if (netSaldo > 0) "+ " else ""
-                        Text(
-                            text = "$netPrefix${formatRupiah(netSaldo)}",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (netSaldo >= 0) EmeraldPrimary else TerracottaPrimary
-                        )
-                    }
-                }
-            }
-        }
-
-        // Mode Switcher Segment (Keluar / Masuk)
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CardSurface)
-                    .border(1.dp, BorderBeige, RoundedCornerShape(12.dp))
-                    .padding(3.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                val isExpense = statsMode == "expense"
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(if (isExpense) TerracottaPrimary else Color.Transparent)
-                        .clickable {
-                            statsMode = "expense"
-                            selectedPeriodTitle = ""
-                        }
-                        .padding(vertical = 9.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Pengeluaran (${monthlyExpenses.size})",
-                        fontSize = 13.sp,
-                        fontWeight = if (isExpense) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isExpense) Color.White else StoneMuted
-                    )
-                }
-
-                val isIncome = statsMode == "income"
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(if (isIncome) EmeraldPrimary else Color.Transparent)
-                        .clickable {
-                            statsMode = "income"
-                            selectedPeriodTitle = ""
-                        }
-                        .padding(vertical = 9.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Pemasukan (${monthlyIncomes.size})",
-                        fontSize = 13.sp,
-                        fontWeight = if (isIncome) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isIncome) Color.White else StoneMuted
-                    )
-                }
-            }
-        }
-
         // Summary Detail Card with Donut Chart
         item {
             Card(
@@ -308,19 +163,18 @@ fun StatsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    val modeLabel = if (statsMode == "income") "TOTAL PEMASUKAN" else "TOTAL PENGELUARAN"
                     Text(
-                        text = modeLabel,
+                        text = "TOTAL PENGELUARAN BULAN INI",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = StoneMuted,
                         letterSpacing = 0.5.sp
                     )
                     Text(
-                        text = formatRupiah(totalActive),
+                        text = formatRupiah(totalExpense),
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (statsMode == "income") EmeraldPrimary else CharcoalInk
+                        color = CharcoalInk
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -333,7 +187,7 @@ fun StatsScreen(
 
                     // Donut Chart
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        DonutChart(categoryStats = categoryStats, totalAmount = totalActive)
+                        DonutChart(categoryStats = categoryStats, totalAmount = totalExpense)
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -341,7 +195,7 @@ fun StatsScreen(
                     // Category Breakdown Rows
                     if (categoryStats.isEmpty()) {
                         Text(
-                            text = "Belum ada transaksi di bulan ini.",
+                            text = "Belum ada pengeluaran di bulan ini.",
                             fontSize = 13.sp,
                             color = StoneMuted,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -349,7 +203,7 @@ fun StatsScreen(
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             categoryStats.forEach { cat ->
-                                val pct = if (totalActive > 0) String.format(Locale.US, "%.1f", (cat.amount.toDouble() / totalActive) * 100) else "0"
+                                val pct = if (totalExpense > 0) String.format(Locale.US, "%.1f", (cat.amount.toDouble() / totalExpense) * 100) else "0"
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
@@ -390,7 +244,7 @@ fun StatsScreen(
             }
         }
 
-        // Tren Card (Adapts to Active Mode)
+        // Tren Card: Pengeluaran Bulanan
         item {
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -399,9 +253,8 @@ fun StatsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(vertical = 16.dp)) {
-                    val trendTitle = if (statsMode == "income") "TREN PEMASUKAN" else "TREN PENGELUARAN"
                     Text(
-                        text = trendTitle,
+                        text = "TREN PENGELUARAN",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = StoneMuted,
@@ -412,7 +265,7 @@ fun StatsScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     InteractiveTrendChart(
-                        monthlyExpenses = activeList,
+                        monthlyExpenses = monthlyExpenses,
                         monthDate = statsMonth,
                         onPeriodSelected = { title, matching ->
                             selectedPeriodTitle = title

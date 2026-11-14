@@ -55,7 +55,6 @@ import com.simplenote.app.ui.screens.today.ExpenseRowCard
 import com.simplenote.app.ui.theme.BorderBeige
 import com.simplenote.app.ui.theme.CardSurface
 import com.simplenote.app.ui.theme.CharcoalInk
-import com.simplenote.app.ui.theme.EmeraldPrimary
 import com.simplenote.app.ui.theme.PaperBackground
 import com.simplenote.app.ui.theme.StoneMuted
 import com.simplenote.app.ui.theme.TerracottaPrimary
@@ -69,12 +68,11 @@ fun HistoryScreen(
     expenses: List<ExpenseEntity>,
     categories: List<CategoryEntity>,
     onExpenseClick: (ExpenseEntity) -> Unit,
-    onAddExpenseForDate: (Date, String) -> Unit = { _, _ -> }
+    onAddExpenseForDate: (Date) -> Unit = {}
 ) {
     var historyMonth by remember { mutableStateOf(Date()) }
     var selectedDay by remember { mutableStateOf<Int?>(null) }
     var searchQuery by remember { mutableStateOf("") }
-    var selectedTypeFilter by remember { mutableStateOf<String?>("expense") } // "expense" | "income" | null (semua)
     var selectedCategoryFilter by remember { mutableStateOf<CategoryEntity?>(null) }
 
     val cal = Calendar.getInstance().apply { time = historyMonth }
@@ -103,17 +101,12 @@ fun HistoryScreen(
         c.getActualMaximum(Calendar.DAY_OF_MONTH)
     }
 
-    val activeDays = remember(expenses, historyMonth, selectedTypeFilter) {
+    val activeDays = remember(expenses, historyMonth) {
         val targetYear = cal.get(Calendar.YEAR)
         val targetMonth = cal.get(Calendar.MONTH)
         val set = mutableSetOf<Int>()
         expenses.forEach { exp ->
-            val matchesType = when (selectedTypeFilter) {
-                "expense" -> exp.type != "income"
-                "income" -> exp.type == "income"
-                else -> true
-            }
-            if (matchesType) {
+            if (exp.type != "income") {
                 val d = exp.parsedDate()
                 if (d != null) {
                     val c = Calendar.getInstance().apply { time = d }
@@ -126,40 +119,32 @@ fun HistoryScreen(
         set
     }
 
-    val filteredExpenses = remember(expenses, historyMonth, searchQuery, selectedCategoryFilter, selectedDay, selectedTypeFilter) {
+    val filteredExpenses = remember(expenses, historyMonth, searchQuery, selectedCategoryFilter, selectedDay) {
         val targetYear = cal.get(Calendar.YEAR)
         val targetMonth = cal.get(Calendar.MONTH)
 
         expenses.filter { exp ->
-            val matchesType = when (selectedTypeFilter) {
-                "expense" -> exp.type != "income"
-                "income" -> exp.type == "income"
-                else -> true
-            }
+            if (exp.type != "income") {
+                val d = exp.parsedDate()
+                if (d != null) {
+                    val c = Calendar.getInstance().apply { time = d }
+                    val inMonth = c.get(Calendar.YEAR) == targetYear && c.get(Calendar.MONTH) == targetMonth
+                    val matchesDay = selectedDay == null || c.get(Calendar.DAY_OF_MONTH) == selectedDay
+                    val matchesSearch = searchQuery.isBlank() ||
+                            exp.note.contains(searchQuery, ignoreCase = true) ||
+                            exp.categoryName.contains(searchQuery, ignoreCase = true)
+                    val matchesCat = selectedCategoryFilter == null || exp.categoryId == selectedCategoryFilter?.id
 
-            val d = exp.parsedDate()
-            if (matchesType && d != null) {
-                val c = Calendar.getInstance().apply { time = d }
-                val inMonth = c.get(Calendar.YEAR) == targetYear && c.get(Calendar.MONTH) == targetMonth
-                val matchesDay = selectedDay == null || c.get(Calendar.DAY_OF_MONTH) == selectedDay
-                val matchesSearch = searchQuery.isBlank() ||
-                        exp.note.contains(searchQuery, ignoreCase = true) ||
-                        exp.categoryName.contains(searchQuery, ignoreCase = true)
-                val matchesCat = selectedCategoryFilter == null || exp.categoryId == selectedCategoryFilter?.id
-
-                inMonth && matchesDay && matchesSearch && matchesCat
+                    inMonth && matchesDay && matchesSearch && matchesCat
+                } else false
             } else false
         }
     }
 
     val dayTotalSum = remember(filteredExpenses) { filteredExpenses.sumOf { it.amount } }
 
-    val relevantCategories = remember(categories, selectedTypeFilter) {
-        when (selectedTypeFilter) {
-            "expense" -> categories.filter { it.type != "income" }
-            "income" -> categories.filter { it.type == "income" }
-            else -> categories
-        }
+    val expenseCategories = remember(categories) {
+        categories.filter { it.type != "income" }
     }
 
     Column(
@@ -199,71 +184,81 @@ fun HistoryScreen(
                         color = CharcoalInk
                     )
 
-                    IconButton(onClick = {
-                        val c = Calendar.getInstance().apply { time = historyMonth; add(Calendar.MONTH, 1) }
-                        historyMonth = c.time
-                        selectedDay = null
-                    }) {
-                        Icon(Icons.Default.ChevronRight, contentDescription = "Bulan Depan", tint = CharcoalInk)
+                    IconButton(
+                        onClick = {
+                            if (!isFutureMonth && !isCurrentMonth) {
+                                val c = Calendar.getInstance().apply { time = historyMonth; add(Calendar.MONTH, 1) }
+                                historyMonth = c.time
+                                selectedDay = null
+                            }
+                        },
+                        enabled = !isFutureMonth && !isCurrentMonth
+                    ) {
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = "Bulan Depan",
+                            tint = if (!isFutureMonth && !isCurrentMonth) CharcoalInk else StoneMuted.copy(alpha = 0.3f)
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Weekday Labels (Min Sen Sel Rab Kam Jum Sab)
-                val weekdays = listOf("Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab")
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    weekdays.forEach { dayName ->
+                // Days of week header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    listOf("Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab").forEach { dayName ->
                         Text(
                             text = dayName,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = StoneMuted,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Days Grid
+                // Calendar Grid
                 val totalSlots = firstDayOffset + daysInMonth
-                val rowsCount = (totalSlots + 6) / 7
-                for (rowIndex in 0 until rowsCount) {
+                val rows = (totalSlots + 6) / 7
+
+                for (row in 0 until rows) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        for (colIndex in 0 until 7) {
-                            val slot = rowIndex * 7 + colIndex
-                            val dayNum = slot - firstDayOffset + 1
-                            if (dayNum in 1..daysInMonth) {
-                                val isFuture = isFutureMonth || (isCurrentMonth && dayNum > currentDay)
-                                val isToday = isCurrentMonth && dayNum == currentDay
-                                val isSelected = selectedDay == dayNum
-                                val hasExpense = activeDays.contains(dayNum)
-
-                                val dayIndicatorColor = if (selectedTypeFilter == "income") EmeraldPrimary else TerracottaPrimary
+                        for (col in 0 until 7) {
+                            val slotIndex = row * 7 + col
+                            val dayNumber = slotIndex - firstDayOffset + 1
+                            if (dayNumber in 1..daysInMonth) {
+                                val isSelected = selectedDay == dayNumber
+                                val isToday = isCurrentMonth && dayNumber == currentDay
+                                val isFutureDay = isFutureMonth || (isCurrentMonth && dayNumber > currentDay)
+                                val hasExpense = activeDays.contains(dayNumber)
 
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .height(36.dp)
-                                        .padding(horizontal = 2.dp)
+                                        .height(34.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            if (isSelected) dayIndicatorColor else Color.Transparent
+                                            when {
+                                                isSelected -> TerracottaPrimary
+                                                else -> Color.Transparent
+                                            }
                                         )
-                                        .then(
-                                            if (isToday && !isSelected) {
-                                                Modifier.border(1.dp, dayIndicatorColor, CircleShape)
-                                            } else Modifier
+                                        .border(
+                                            width = if (isToday && !isSelected) 1.dp else 0.dp,
+                                            color = if (isToday && !isSelected) TerracottaPrimary else Color.Transparent,
+                                            shape = CircleShape
                                         )
-                                        .clickable(enabled = !isFuture) {
-                                            selectedDay = if (selectedDay == dayNum) null else dayNum
+                                        .clickable(enabled = !isFutureDay) {
+                                            selectedDay = if (isSelected) null else dayNumber
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -272,13 +267,13 @@ fun HistoryScreen(
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         Text(
-                                            text = dayNum.toString(),
+                                            text = dayNumber.toString(),
                                             fontSize = 12.sp,
                                             fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
                                             color = when {
-                                                isFuture -> StoneMuted.copy(alpha = 0.35f)
+                                                isFutureDay -> StoneMuted.copy(alpha = 0.35f)
                                                 isSelected -> Color.White
-                                                isToday -> dayIndicatorColor
+                                                isToday -> TerracottaPrimary
                                                 else -> CharcoalInk
                                             }
                                         )
@@ -287,7 +282,7 @@ fun HistoryScreen(
                                                 modifier = Modifier
                                                     .size(3.dp)
                                                     .clip(CircleShape)
-                                                    .background(if (isSelected) Color.White else dayIndicatorColor)
+                                                    .background(if (isSelected) Color.White else TerracottaPrimary)
                                             )
                                         } else {
                                             Spacer(modifier = Modifier.size(3.dp))
@@ -305,58 +300,7 @@ fun HistoryScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Segmented Type Filter Pill (Keluar / Masuk / Semua)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(CardSurface)
-                .border(1.dp, BorderBeige, RoundedCornerShape(12.dp))
-                .padding(3.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            listOf(
-                "expense" to "Keluar",
-                "income" to "Masuk",
-                null to "Semua"
-            ).forEach { (typeVal, label) ->
-                val isSelected = selectedTypeFilter == typeVal
-                val activeBg = when (typeVal) {
-                    "income" -> EmeraldPrimary
-                    "expense" -> TerracottaPrimary
-                    else -> CharcoalInk
-                }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(if (isSelected) activeBg else Color.Transparent)
-                        .clickable {
-                            selectedTypeFilter = typeVal
-                            selectedCategoryFilter = null
-                        }
-                        .padding(vertical = 7.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = label,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) Color.White else StoneMuted
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
         // Summary Bar with Quick Add Button
-        val filterTitle = when (selectedTypeFilter) {
-            "income" -> "Pemasukan"
-            "expense" -> "Pengeluaran"
-            else -> "Transaksi"
-        }
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -372,21 +316,20 @@ fun HistoryScreen(
                     text = if (selectedDay != null) {
                         "$selectedDay $monthYearText"
                     } else {
-                        "Semua $filterTitle Bulan Ini"
+                        "Semua Pengeluaran Bulan Ini"
                     },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = CharcoalInk
                 )
                 Text(
-                    text = "Total: ${formatRupiah(dayTotalSum)} (${filteredExpenses.size} transaksi)",
+                    text = "Total: ${formatRupiah(dayTotalSum)} (${filteredExpenses.size} pengeluaran)",
                     fontSize = 11.sp,
                     color = StoneMuted
                 )
             }
 
             if (selectedDay != null) {
-                val btnColor = if (selectedTypeFilter == "income") EmeraldPrimary else TerracottaPrimary
                 Button(
                     onClick = {
                         val targetCal = Calendar.getInstance().apply {
@@ -398,10 +341,9 @@ fun HistoryScreen(
                             set(Calendar.SECOND, nowCal.get(Calendar.SECOND))
                             set(Calendar.MILLISECOND, nowCal.get(Calendar.MILLISECOND))
                         }
-                        val targetType = selectedTypeFilter ?: "expense"
-                        onAddExpenseForDate(targetCal.time, targetType)
+                        onAddExpenseForDate(targetCal.time)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = btnColor),
+                    colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary),
                     shape = CircleShape,
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -420,7 +362,7 @@ fun HistoryScreen(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("Cari catatan atau nominal...", fontSize = 13.sp, color = StoneMuted) },
+            placeholder = { Text("Cari catatan pengeluaran...", fontSize = 13.sp, color = StoneMuted) },
             leadingIcon = {
                 Icon(Icons.Default.Search, contentDescription = "Cari", tint = StoneMuted, modifier = Modifier.size(18.dp))
             },
@@ -429,7 +371,7 @@ fun HistoryScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = CardSurface,
                 unfocusedContainerColor = CardSurface,
-                focusedBorderColor = if (selectedTypeFilter == "income") EmeraldPrimary else TerracottaPrimary,
+                focusedBorderColor = TerracottaPrimary,
                 unfocusedBorderColor = BorderBeige
             ),
             modifier = Modifier.fillMaxWidth()
@@ -445,12 +387,11 @@ fun HistoryScreen(
             // "Semua" Chip
             item {
                 val isAll = selectedCategoryFilter == null
-                val activeChipBg = if (selectedTypeFilter == "income") EmeraldPrimary else TerracottaPrimary
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(if (isAll) activeChipBg else CardSurface)
-                        .border(1.dp, if (isAll) activeChipBg else BorderBeige, RoundedCornerShape(20.dp))
+                        .background(if (isAll) TerracottaPrimary else CardSurface)
+                        .border(1.dp, if (isAll) TerracottaPrimary else BorderBeige, RoundedCornerShape(20.dp))
                         .clickable { selectedCategoryFilter = null }
                         .padding(horizontal = 14.dp, vertical = 7.dp)
                 ) {
@@ -463,14 +404,13 @@ fun HistoryScreen(
                 }
             }
 
-            items(relevantCategories) { cat ->
+            items(expenseCategories) { cat ->
                 val isSelected = selectedCategoryFilter?.id == cat.id
-                val activeChipBg = if (selectedTypeFilter == "income") EmeraldPrimary else TerracottaPrimary
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(if (isSelected) activeChipBg else CardSurface)
-                        .border(1.dp, if (isSelected) activeChipBg else BorderBeige, RoundedCornerShape(20.dp))
+                        .background(if (isSelected) TerracottaPrimary else CardSurface)
+                        .border(1.dp, if (isSelected) TerracottaPrimary else BorderBeige, RoundedCornerShape(20.dp))
                         .clickable {
                             selectedCategoryFilter = if (isSelected) null else cat
                         }
@@ -504,7 +444,7 @@ fun HistoryScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Tidak ada catatan di periode ini.",
+                    text = "Tidak ada catatan pengeluaran di periode ini.",
                     fontSize = 13.sp,
                     color = StoneMuted
                 )
