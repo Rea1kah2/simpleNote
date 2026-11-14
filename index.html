@@ -23,19 +23,23 @@
 
   <div id="app" class="app-container">
     
-    <!-- Top Header Bar -->
+    <!-- Top Header Bar with Global Section Switcher -->
     <header class="app-header">
-      <div class="header-content">
-        <h1 id="screen-title" class="screen-title">Hari Ini</h1>
+      <div class="header-content-split">
+        <h1 class="brand-title">SimpleNote</h1>
+        <div class="global-section-switcher">
+          <button id="btn-section-expense" class="section-switch-btn active" type="button">Pengeluaran</button>
+          <button id="btn-section-income" class="section-switch-btn" type="button">Pemasukan</button>
+        </div>
       </div>
     </header>
 
     <!-- Main View Content -->
     <main id="main-content" class="main-content">
       
-      <!-- TAB 1: TODAY VIEW -->
+      <!-- TAB 1: TODAY VIEW (Pure Pengeluaran) -->
       <section id="tab-today" class="tab-pane active">
-        <!-- Direct Canvas Hero Header (52pt) -->
+        <!-- Direct Canvas Hero Header -->
         <div class="canvas-hero">
           <div class="hero-date-line">
             <span id="hero-day-name" class="hero-tag">HARI INI</span>
@@ -43,21 +47,17 @@
             <span id="hero-full-date" class="hero-date">Memuat...</span>
           </div>
           
+          <div class="hero-sublabel">Total Pengeluaran Hari Ini</div>
           <div id="today-total-display" class="hero-amount">Rp 0</div>
           
-          <!-- Terracotta Signature Bar -->
-          <div class="hero-signature-bar"></div>
-          
-          <div class="hero-status-line">
-            <span class="status-indicator-dot"></span>
-            <span id="today-status-text">Dompetmu masih tenang hari ini</span>
-          </div>
+          <!-- Signature Accent Bar -->
+          <div id="today-signature-bar" class="hero-signature-bar"></div>
         </div>
 
         <!-- Activity Section -->
         <div class="section-container">
           <div class="section-header">
-            <span class="section-title">Aktivitas Hari Ini</span>
+            <span id="today-list-title" class="section-title">Aktivitas Pengeluaran Hari Ini</span>
             <span id="today-count-badge" class="section-subtitle"></span>
           </div>
 
@@ -66,13 +66,63 @@
           </div>
         </div>
 
-        <!-- Floating Action Button (FAB) -->
-        <button id="btn-open-add" class="fab-btn" aria-label="Catat Pengeluaran">
+        <!-- Floating Action Button (FAB) Pengeluaran -->
+        <button id="btn-open-add" class="fab-btn" aria-label="Catat">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          <span>Catat</span>
+          <span id="fab-label">Catat</span>
+        </button>
+      </section>
+
+      <!-- SECTION: INCOME VIEW (Mandiri) -->
+      <section id="tab-income" class="tab-pane">
+        <!-- Canvas Hero: Pemasukan -->
+        <div class="canvas-hero income-hero">
+          <div class="hero-date-line">
+            <span class="hero-tag income-tag">RUANG PEMASUKAN</span>
+            <span class="hero-dot">•</span>
+            <span id="income-full-date" class="hero-date">Memuat...</span>
+          </div>
+          
+          <div class="hero-sublabel">Total Pemasukan Bulan Ini</div>
+          <div id="income-month-total-display" class="hero-amount income-amount">+ Rp 0</div>
+          
+          <!-- Signature Emerald Bar -->
+          <div class="hero-signature-bar income-signature-bar"></div>
+
+          <div class="hero-breakdown-row">
+            <div class="hero-breakdown-item income-item">
+              <span class="breakdown-dot income-dot"></span>
+              <span class="breakdown-label">Hari Ini:</span>
+              <span id="income-today-subtotal" class="breakdown-value">+ Rp 0</span>
+            </div>
+            <div class="hero-breakdown-item">
+              <span id="income-count-subtotal" class="breakdown-value" style="color: var(--sn-stone-muted);">0 Transaksi</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Section -->
+        <div class="section-container">
+          <div class="section-header">
+            <span class="section-title">Semua Riwayat Pemasukan</span>
+            <span id="income-count-badge" class="section-subtitle"></span>
+          </div>
+
+          <div id="income-expenses-list" class="expense-list">
+            <!-- Dynamic items or empty state -->
+          </div>
+        </div>
+
+        <!-- Floating Action Button (FAB) Pemasukan -->
+        <button id="btn-open-add-income" class="fab-btn fab-income" aria-label="Catat Pemasukan">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Catat Masuk</span>
         </button>
       </section>
 
@@ -127,7 +177,7 @@
         <div id="history-grouped-list" class="history-groups-container"></div>
       </section>
 
-      <!-- TAB 3: STATS VIEW -->
+      <!-- TAB 3: STATS VIEW (Pure Pengeluaran) -->
       <section id="tab-stats" class="tab-pane">
         <!-- Month Navigator -->
         <div class="month-pill-selector">
@@ -138,7 +188,7 @@
 
         <!-- Monthly Summary Card -->
         <div class="stats-summary-card">
-          <div class="stats-micro-label">TOTAL PENGELUARAN BULAN INI</div>
+          <div id="stats-active-mode-label" class="stats-micro-label">TOTAL PENGELUARAN BULAN INI</div>
           <div id="stats-monthly-total" class="stats-big-number">Rp 0</div>
           <div id="stats-average-daily" class="stats-subtext">Rata-rata: Rp 0/hari</div>
         </div>
@@ -538,6 +588,12 @@
           <div style="width: 50px;"></div>
         </div>
 
+        <!-- Segmented Tab: Pengeluaran / Pemasukan -->
+        <div class="segmented-control mode-pill-segmented" style="margin-bottom: 12px;">
+          <button id="cat-manager-tab-expense" class="segmented-btn active" data-type="expense">Pengeluaran</button>
+          <button id="cat-manager-tab-income" class="segmented-btn" data-type="income">Pemasukan</button>
+        </div>
+
         <!-- New Category Form -->
         <div class="add-cat-card">
           <div class="add-cat-input-row">
@@ -608,6 +664,6 @@
 
   </div>
 
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>
