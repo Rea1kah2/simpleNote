@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.simplenote.app.AppSection
 import com.simplenote.app.data.model.ExpenseEntity
 import com.simplenote.app.ui.components.AppIcon
 import com.simplenote.app.ui.components.CategoryStat
@@ -47,6 +48,7 @@ import com.simplenote.app.ui.screens.today.ExpenseRowCard
 import com.simplenote.app.ui.theme.BorderBeige
 import com.simplenote.app.ui.theme.CardSurface
 import com.simplenote.app.ui.theme.CharcoalInk
+import com.simplenote.app.ui.theme.EmeraldPrimary
 import com.simplenote.app.ui.theme.PaperBackground
 import com.simplenote.app.ui.theme.StoneMuted
 import com.simplenote.app.ui.theme.TerracottaPrimary
@@ -59,9 +61,13 @@ import java.util.Locale
 @Composable
 fun StatsScreen(
     expenses: List<ExpenseEntity>,
-    onExpenseClick: (ExpenseEntity) -> Unit
+    onExpenseClick: (ExpenseEntity) -> Unit,
+    activeSection: AppSection = AppSection.EXPENSE
 ) {
     var statsMonth by remember { mutableStateOf(Date()) }
+
+    val isIncome = activeSection == AppSection.INCOME
+    val activeAccent = if (isIncome) EmeraldPrimary else TerracottaPrimary
 
     val cal = Calendar.getInstance().apply { time = statsMonth }
     val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
@@ -70,11 +76,12 @@ fun StatsScreen(
         SimpleDateFormat("MMMM yyyy", Locale("id", "ID")).format(statsMonth)
     }
 
-    val monthlyExpenses = remember(expenses, statsMonth) {
+    val monthlyExpenses = remember(expenses, statsMonth, activeSection) {
         val y = cal.get(Calendar.YEAR)
         val m = cal.get(Calendar.MONTH)
         expenses.filter { exp ->
-            if (exp.type != "income") {
+            val matchesType = if (isIncome) exp.type == "income" else exp.type != "income"
+            if (matchesType) {
                 val d = exp.parsedDate()
                 if (d != null) {
                     val c = Calendar.getInstance().apply { time = d }
@@ -164,17 +171,18 @@ fun StatsScreen(
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
-                        text = "TOTAL PENGELUARAN BULAN INI",
+                        text = if (isIncome) "TOTAL PEMASUKAN BULAN INI" else "TOTAL PENGELUARAN BULAN INI",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = StoneMuted,
                         letterSpacing = 0.5.sp
                     )
+                    val prefix = if (isIncome) "+ " else ""
                     Text(
-                        text = formatRupiah(totalExpense),
+                        text = "$prefix${formatRupiah(totalExpense)}",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CharcoalInk
+                        color = if (isIncome) EmeraldPrimary else CharcoalInk
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -195,7 +203,7 @@ fun StatsScreen(
                     // Category Breakdown Rows
                     if (categoryStats.isEmpty()) {
                         Text(
-                            text = "Belum ada pengeluaran di bulan ini.",
+                            text = if (isIncome) "Belum ada pemasukan di bulan ini." else "Belum ada pengeluaran di bulan ini.",
                             fontSize = 13.sp,
                             color = StoneMuted,
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -244,7 +252,7 @@ fun StatsScreen(
             }
         }
 
-        // Tren Card: Pengeluaran Bulanan
+        // Tren Card: Pengeluaran / Pemasukan Bulanan
         item {
             Card(
                 shape = RoundedCornerShape(16.dp),
@@ -254,7 +262,7 @@ fun StatsScreen(
             ) {
                 Column(modifier = Modifier.padding(vertical = 16.dp)) {
                     Text(
-                        text = "TREN PENGELUARAN",
+                        text = if (isIncome) "TREN PEMASUKAN" else "TREN PENGELUARAN",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = StoneMuted,
@@ -270,7 +278,8 @@ fun StatsScreen(
                         onPeriodSelected = { title, matching ->
                             selectedPeriodTitle = title
                             selectedPeriodExpenses = matching
-                        }
+                        },
+                        barColor = activeAccent
                     )
                 }
             }

@@ -900,7 +900,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Register service worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js?v=15').catch((err) => {
+    navigator.serviceWorker.register('sw.js?v=16').catch((err) => {
       console.log('SW registration note:', err);
     });
   }
@@ -919,11 +919,13 @@ function setupNavigation() {
   const navBtns = document.querySelectorAll('.bottom-nav .nav-item');
   const btnSecExpense = document.getElementById('btn-section-expense');
   const btnSecIncome = document.getElementById('btn-section-income');
+  const appContainer = document.getElementById('app');
 
-  function switchSection(section) {
-    state.appSection = section; // 'expense' | 'income'
+  function updateActiveView() {
+    const isIncome = state.appSection === 'income';
+
     if (btnSecExpense && btnSecIncome) {
-      if (section === 'income') {
+      if (isIncome) {
         btnSecIncome.classList.add('active');
         btnSecExpense.classList.remove('active');
       } else {
@@ -932,17 +934,50 @@ function setupNavigation() {
       }
     }
 
+    if (appContainer) {
+      if (isIncome) {
+        appContainer.classList.add('app-section-income');
+        appContainer.classList.remove('app-section-expense');
+      } else {
+        appContainer.classList.add('app-section-expense');
+        appContainer.classList.remove('app-section-income');
+      }
+    }
+
+    // Hide all panes
     document.querySelectorAll('.tab-pane').forEach((p) => p.classList.remove('active'));
 
-    if (section === 'income') {
-      const incomePane = document.getElementById('tab-income');
-      if (incomePane) incomePane.classList.add('active');
-      renderIncomeView();
-    } else {
-      const currentPane = document.getElementById(state.currentTab || 'tab-today');
-      if (currentPane) currentPane.classList.add('active');
-      renderAll();
+    const tab = state.currentTab || 'tab-today';
+
+    if (tab === 'tab-today' || tab === 'tab-income') {
+      state.currentTab = 'tab-today';
+      if (isIncome) {
+        const incomePane = document.getElementById('tab-income');
+        if (incomePane) incomePane.classList.add('active');
+        renderIncomeView();
+      } else {
+        const todayPane = document.getElementById('tab-today');
+        if (todayPane) todayPane.classList.add('active');
+        renderTodayView();
+      }
+    } else if (tab === 'tab-history') {
+      const histPane = document.getElementById('tab-history');
+      if (histPane) histPane.classList.add('active');
+      renderHistoryView();
+    } else if (tab === 'tab-stats') {
+      const statsPane = document.getElementById('tab-stats');
+      if (statsPane) statsPane.classList.add('active');
+      renderStatsView();
+    } else if (tab === 'tab-settings') {
+      const settPane = document.getElementById('tab-settings');
+      if (settPane) settPane.classList.add('active');
+      renderSettingsView();
     }
+  }
+
+  function switchSection(section) {
+    state.appSection = section; // 'expense' | 'income'
+    updateActiveView();
   }
 
   if (btnSecExpense) {
@@ -965,25 +1000,11 @@ function setupNavigation() {
       const targetTab = btn.getAttribute('data-tab');
       state.currentTab = targetTab;
 
-      // Automatically switch back to Expense section if user taps any bottom tab
-      if (state.appSection === 'income') {
-        switchSection('expense');
-      }
-
       navBtns.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
 
-      document.querySelectorAll('.tab-pane').forEach((p) => p.classList.remove('active'));
-      const activePane = document.getElementById(targetTab);
-      if (activePane) activePane.classList.add('active');
-
-      if (targetTab === 'tab-today') renderTodayView();
-      if (targetTab === 'tab-history') renderHistoryView();
-      if (targetTab === 'tab-stats') {
-        state.shouldAutoScrollDaily = true;
-        renderStatsView();
-      }
-      if (targetTab === 'tab-settings') renderSettingsView();
+      // Update active view without resetting section!
+      updateActiveView();
     });
   });
 }
@@ -1200,13 +1221,13 @@ function setupHistoryTab() {
     renderHistoryView();
   });
 
-  // Quick Add Button in History Tab (strictly adds expense in Pengeluaran section)
+  // Quick Add Button in History Tab (respects active section)
   const quickAddBtn = document.getElementById('btn-quick-add-history');
   if (quickAddBtn) {
     quickAddBtn.addEventListener('click', () => {
       triggerHaptic();
       if (state.selectedHistoryDate) {
-        openAddModal(state.selectedHistoryDate, 'expense');
+        openAddModal(state.selectedHistoryDate, state.appSection === 'income' ? 'income' : 'expense');
       }
     });
   }
@@ -1219,14 +1240,17 @@ function renderHistoryView() {
 
   document.getElementById('calendar-month-label').textContent = formatMonthYear(state.historyMonth);
 
+  const isIncome = state.appSection === 'income';
+  const typeLabel = isIncome ? 'Pemasukan' : 'Pengeluaran';
+
   // Render Calendar Grid
   renderCalendarDaysGrid();
 
   // Render Category Filter Chips
   renderHistoryCategoryChips();
 
-  // Filter Expenses strictly for expenses (pure expense tracking)
-  let filtered = state.expenses.filter((exp) => exp.type !== 'income');
+  // Filter Expenses based on active section
+  let filtered = state.expenses.filter((exp) => isIncome ? exp.type === 'income' : exp.type !== 'income');
 
   if (searchActive) {
     const q = state.historySearchQuery.toLowerCase();
@@ -1265,19 +1289,20 @@ function renderHistoryView() {
 
   // Calculate Total
   const total = filtered.reduce((acc, curr) => acc + curr.amount, 0);
-  document.getElementById('history-filtered-total').textContent = `Total: ${formatRupiah(total)}`;
+  const prefix = isIncome ? '+ ' : '';
+  document.getElementById('history-filtered-total').textContent = `Total: ${prefix}${formatRupiah(total)}`;
 
   const statusLabel = document.getElementById('history-filter-status');
   const quickAddBtn = document.getElementById('btn-quick-add-history');
 
   if (searchActive) {
-    statusLabel.textContent = `Pencarian: "${state.historySearchQuery}" (Pengeluaran)`;
+    statusLabel.textContent = `Pencarian: "${state.historySearchQuery}" (${typeLabel})`;
     if (quickAddBtn) quickAddBtn.style.display = 'none';
   } else if (state.selectedHistoryDate) {
-    statusLabel.textContent = `${formatRelativeDate(state.selectedHistoryDate)} (Pengeluaran)`;
+    statusLabel.textContent = `${formatRelativeDate(state.selectedHistoryDate)} (${typeLabel})`;
     if (quickAddBtn) quickAddBtn.style.display = 'inline-flex';
   } else {
-    statusLabel.textContent = `Semua Pengeluaran Bulan Ini`;
+    statusLabel.textContent = `Semua ${typeLabel} Bulan Ini`;
     if (quickAddBtn) quickAddBtn.style.display = 'none';
   }
 
@@ -1290,7 +1315,7 @@ function renderHistoryView() {
       <div class="empty-state">
         <div class="empty-icon">${renderSvgIcon('sparkles', 28)}</div>
         <div class="empty-title">Tidak Ada Catatan</div>
-        <div class="empty-msg">Tidak ada transaksi pengeluaran yang cocok dengan kriteria filter saat ini.</div>
+        <div class="empty-msg">Tidak ada transaksi ${typeLabel.toLowerCase()} yang cocok dengan kriteria filter saat ini.</div>
       </div>
     `;
     return;
@@ -1318,7 +1343,7 @@ function renderHistoryView() {
     groupEl.innerHTML = `
       <div class="history-group-header">
         <span>${formatRelativeDate(firstDate)}</span>
-        <span class="group-day-total">${formatRupiah(dayTotal)}</span>
+        <span class="group-day-total">${prefix}${formatRupiah(dayTotal)}</span>
       </div>
       <div class="expense-list"></div>
     `;
@@ -1342,10 +1367,13 @@ function renderCalendarDaysGrid() {
   const firstDayIndex = new Date(y, m, 1).getDay();
   const totalDays = new Date(y, m + 1, 0).getDate();
 
-  // Find which days have transactions matching active filter (strictly expenses)
+  const isIncome = state.appSection === 'income';
+
+  // Find which days have transactions matching active section
   const activeDays = new Set();
   state.expenses.forEach((exp) => {
-    if (exp.type !== 'income') {
+    const match = isIncome ? exp.type === 'income' : exp.type !== 'income';
+    if (match) {
       const d = new Date(exp.timestamp);
       if (d.getFullYear() === y && d.getMonth() === m) {
         activeDays.add(d.getDate());
@@ -1383,6 +1411,9 @@ function renderCalendarDaysGrid() {
     if (activeDays.has(day)) {
       const dot = document.createElement('span');
       dot.className = 'day-dot';
+      if (isIncome) {
+        dot.style.backgroundColor = 'var(--sn-income)';
+      }
       cell.appendChild(dot);
     }
 
@@ -1412,11 +1443,13 @@ function renderHistoryCategoryChips() {
   const container = document.getElementById('history-category-filters');
   container.innerHTML = '';
 
-  const relevantCats = state.categories.filter((c) => c.type !== 'income');
+  const isIncome = state.appSection === 'income';
+  const relevantCats = state.categories.filter((c) => isIncome ? c.type === 'income' : c.type !== 'income');
+  const activeClass = isIncome ? 'active-income' : 'active';
 
   // "Semua" Chip
   const allBtn = document.createElement('button');
-  allBtn.className = `chip-btn ${state.historyCategoryFilter === null ? 'active' : ''}`;
+  allBtn.className = `chip-btn ${state.historyCategoryFilter === null ? activeClass : ''}`;
   allBtn.textContent = 'Semua';
   allBtn.addEventListener('click', () => {
     triggerHaptic();
@@ -1429,7 +1462,7 @@ function renderHistoryCategoryChips() {
   relevantCats.forEach((cat) => {
     const chip = document.createElement('button');
     const isSelected = state.historyCategoryFilter && state.historyCategoryFilter.id === cat.id;
-    chip.className = `chip-btn ${isSelected ? 'active' : ''}`;
+    chip.className = `chip-btn ${isSelected ? activeClass : ''}`;
     chip.innerHTML = `<span class="chip-svg-icon">${getCategoryIcon(cat, 15)}</span> <span>${escapeHtml(cat.name)}</span>`;
     chip.addEventListener('click', () => {
       triggerHaptic();
@@ -1491,27 +1524,39 @@ function renderStatsView() {
   const y = state.statsMonth.getFullYear();
   const m = state.statsMonth.getMonth();
 
-  // Monthly transactions filtered strictly for expenses (pure expense tracking)
+  const isIncome = state.appSection === 'income';
+
+  // Section titles
+  const catTitleEl = document.getElementById('stats-cat-section-title');
+  if (catTitleEl) catTitleEl.textContent = isIncome ? 'Kategori Pemasukan' : 'Kategori Pengeluaran';
+
+  const trendTitleEl = document.getElementById('stats-trend-section-title');
+  if (trendTitleEl) trendTitleEl.textContent = isIncome ? 'Tren Pemasukan' : 'Tren Pengeluaran';
+
+  // Monthly transactions filtered by section
   const monthlyExpenses = state.expenses.filter((exp) => {
     const d = new Date(exp.timestamp);
-    return d.getFullYear() === y && d.getMonth() === m && exp.type !== 'income';
+    const inMonth = d.getFullYear() === y && d.getMonth() === m;
+    const matchType = isIncome ? exp.type === 'income' : exp.type !== 'income';
+    return inMonth && matchType;
   });
 
   const totalExpense = monthlyExpenses.reduce((acc, curr) => acc + curr.amount, 0);
 
   const modeLabel = document.getElementById('stats-active-mode-label');
   if (modeLabel) {
-    modeLabel.textContent = 'TOTAL PENGELUARAN BULAN INI';
+    modeLabel.textContent = isIncome ? 'TOTAL PEMASUKAN BULAN INI' : 'TOTAL PENGELUARAN BULAN INI';
   }
 
-  document.getElementById('stats-monthly-total').textContent = formatRupiah(totalExpense);
-  document.getElementById('donut-center-amount').textContent = formatCompactRupiah(totalExpense);
+  const prefix = isIncome ? '+ ' : '';
+  document.getElementById('stats-monthly-total').textContent = `${prefix}${formatRupiah(totalExpense)}`;
+  document.getElementById('donut-center-amount').textContent = `${prefix}${formatCompactRupiah(totalExpense)}`;
 
   const daysInMonth = new Date(y, m + 1, 0).getDate();
   const avg = totalExpense > 0 ? totalExpense / daysInMonth : 0;
   document.getElementById('stats-average-daily').textContent = `Rata-rata: ${formatCompactRupiah(avg)}/hari`;
 
-  // Aggregate Category Breakdown for expenses
+  // Aggregate Category Breakdown
   const catMap = {};
   monthlyExpenses.forEach((exp) => {
     const name = exp.categoryName || 'Lainnya';
@@ -1530,7 +1575,8 @@ function renderStatsView() {
   breakdownList.innerHTML = '';
 
   if (catStats.length === 0) {
-    breakdownList.innerHTML = `<div class="empty-msg" style="text-align:center; padding: 20px 0;">Belum ada pengeluaran di bulan ini.</div>`;
+    const emptyNotice = isIncome ? 'Belum ada pemasukan di bulan ini.' : 'Belum ada pengeluaran di bulan ini.';
+    breakdownList.innerHTML = `<div class="empty-msg" style="text-align:center; padding: 20px 0;">${emptyNotice}</div>`;
   } else {
     catStats.forEach((cat, idx) => {
       const color = WARM_PALETTE[idx % WARM_PALETTE.length];
@@ -1543,7 +1589,7 @@ function renderStatsView() {
         <span class="chip-svg-icon" style="margin-right:6px; color:${color};">${getCategoryIcon(cat, 16)}</span>
         <span class="cat-label">${escapeHtml(cat.name)}</span>
         <span class="cat-percent">${pct}%</span>
-        <span class="cat-sum">${formatRupiah(cat.amount)}</span>
+        <span class="cat-sum">${prefix}${formatRupiah(cat.amount)}</span>
       `;
       breakdownList.appendChild(row);
     });
@@ -1611,7 +1657,9 @@ function renderTrendBreakdown(matchingExpenses, title) {
 
   listEl.innerHTML = '';
   if (matchingExpenses.length === 0) {
-    listEl.innerHTML = `<div class="trend-breakdown-empty">Tidak ada catatan pengeluaran pada periode ini.</div>`;
+    const isIncome = state.appSection === 'income';
+    const emptyNotice = isIncome ? 'Tidak ada catatan pemasukan pada periode ini.' : 'Tidak ada catatan pengeluaran pada periode ini.';
+    listEl.innerHTML = `<div class="trend-breakdown-empty">${emptyNotice}</div>`;
     return;
   }
 
@@ -1637,10 +1685,12 @@ function renderStatsTrendChart() {
   const m = state.statsMonth.getMonth();
   const daysInMonth = new Date(y, m + 1, 0).getDate();
 
+  const isIncome = state.appSection === 'income';
   const monthlyExpenses = state.expenses.filter((exp) => {
     const d = new Date(exp.timestamp);
     const inMonth = d.getFullYear() === y && d.getMonth() === m;
-    return inMonth && exp.type !== 'income';
+    const matchType = isIncome ? exp.type === 'income' : exp.type !== 'income';
+    return inMonth && matchType;
   });
 
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];

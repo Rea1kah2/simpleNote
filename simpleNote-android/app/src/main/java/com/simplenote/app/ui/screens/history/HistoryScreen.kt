@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.simplenote.app.AppSection
 import com.simplenote.app.data.model.CategoryEntity
 import com.simplenote.app.data.model.ExpenseEntity
 import com.simplenote.app.ui.components.AppIcon
@@ -55,6 +56,7 @@ import com.simplenote.app.ui.screens.today.ExpenseRowCard
 import com.simplenote.app.ui.theme.BorderBeige
 import com.simplenote.app.ui.theme.CardSurface
 import com.simplenote.app.ui.theme.CharcoalInk
+import com.simplenote.app.ui.theme.EmeraldPrimary
 import com.simplenote.app.ui.theme.PaperBackground
 import com.simplenote.app.ui.theme.StoneMuted
 import com.simplenote.app.ui.theme.TerracottaPrimary
@@ -68,12 +70,17 @@ fun HistoryScreen(
     expenses: List<ExpenseEntity>,
     categories: List<CategoryEntity>,
     onExpenseClick: (ExpenseEntity) -> Unit,
-    onAddExpenseForDate: (Date) -> Unit = {}
+    activeSection: AppSection = AppSection.EXPENSE,
+    onAddExpenseForDate: (Date) -> Unit = {},
+    onAddIncomeForDate: (Date) -> Unit = {}
 ) {
     var historyMonth by remember { mutableStateOf(Date()) }
     var selectedDay by remember { mutableStateOf<Int?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf<CategoryEntity?>(null) }
+
+    val isIncome = activeSection == AppSection.INCOME
+    val activeAccent = if (isIncome) EmeraldPrimary else TerracottaPrimary
 
     val cal = Calendar.getInstance().apply { time = historyMonth }
     val monthYearText = remember(historyMonth) {
@@ -101,12 +108,13 @@ fun HistoryScreen(
         c.getActualMaximum(Calendar.DAY_OF_MONTH)
     }
 
-    val activeDays = remember(expenses, historyMonth) {
+    val activeDays = remember(expenses, historyMonth, activeSection) {
         val targetYear = cal.get(Calendar.YEAR)
         val targetMonth = cal.get(Calendar.MONTH)
         val set = mutableSetOf<Int>()
         expenses.forEach { exp ->
-            if (exp.type != "income") {
+            val matchesType = if (isIncome) exp.type == "income" else exp.type != "income"
+            if (matchesType) {
                 val d = exp.parsedDate()
                 if (d != null) {
                     val c = Calendar.getInstance().apply { time = d }
@@ -119,12 +127,13 @@ fun HistoryScreen(
         set
     }
 
-    val filteredExpenses = remember(expenses, historyMonth, searchQuery, selectedCategoryFilter, selectedDay) {
+    val filteredExpenses = remember(expenses, historyMonth, searchQuery, selectedCategoryFilter, selectedDay, activeSection) {
         val targetYear = cal.get(Calendar.YEAR)
         val targetMonth = cal.get(Calendar.MONTH)
 
         expenses.filter { exp ->
-            if (exp.type != "income") {
+            val matchesType = if (isIncome) exp.type == "income" else exp.type != "income"
+            if (matchesType) {
                 val d = exp.parsedDate()
                 if (d != null) {
                     val c = Calendar.getInstance().apply { time = d }
@@ -143,8 +152,8 @@ fun HistoryScreen(
 
     val dayTotalSum = remember(filteredExpenses) { filteredExpenses.sumOf { it.amount } }
 
-    val expenseCategories = remember(categories) {
-        categories.filter { it.type != "income" }
+    val relevantCategories = remember(categories, activeSection) {
+        categories.filter { if (isIncome) it.type == "income" else it.type != "income" }
     }
 
     Column(
@@ -248,13 +257,13 @@ fun HistoryScreen(
                                         .clip(CircleShape)
                                         .background(
                                             when {
-                                                isSelected -> TerracottaPrimary
+                                                isSelected -> activeAccent
                                                 else -> Color.Transparent
                                             }
                                         )
                                         .border(
                                             width = if (isToday && !isSelected) 1.dp else 0.dp,
-                                            color = if (isToday && !isSelected) TerracottaPrimary else Color.Transparent,
+                                            color = if (isToday && !isSelected) activeAccent else Color.Transparent,
                                             shape = CircleShape
                                         )
                                         .clickable(enabled = !isFutureDay) {
@@ -273,7 +282,7 @@ fun HistoryScreen(
                                             color = when {
                                                 isFutureDay -> StoneMuted.copy(alpha = 0.35f)
                                                 isSelected -> Color.White
-                                                isToday -> TerracottaPrimary
+                                                isToday -> activeAccent
                                                 else -> CharcoalInk
                                             }
                                         )
@@ -282,7 +291,7 @@ fun HistoryScreen(
                                                 modifier = Modifier
                                                     .size(3.dp)
                                                     .clip(CircleShape)
-                                                    .background(if (isSelected) Color.White else TerracottaPrimary)
+                                                    .background(if (isSelected) Color.White else activeAccent)
                                             )
                                         } else {
                                             Spacer(modifier = Modifier.size(3.dp))
@@ -314,16 +323,18 @@ fun HistoryScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = if (selectedDay != null) {
-                        "$selectedDay $monthYearText"
+                        "$selectedDay $monthYearText (${if (isIncome) "Pemasukan" else "Pengeluaran"})"
                     } else {
-                        "Semua Pengeluaran Bulan Ini"
+                        if (isIncome) "Semua Pemasukan Bulan Ini" else "Semua Pengeluaran Bulan Ini"
                     },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = CharcoalInk
                 )
+                val typeCountLabel = if (isIncome) "pemasukan" else "pengeluaran"
+                val prefix = if (isIncome) "+ " else ""
                 Text(
-                    text = "Total: ${formatRupiah(dayTotalSum)} (${filteredExpenses.size} pengeluaran)",
+                    text = "Total: $prefix${formatRupiah(dayTotalSum)} (${filteredExpenses.size} $typeCountLabel)",
                     fontSize = 11.sp,
                     color = StoneMuted
                 )
@@ -341,9 +352,13 @@ fun HistoryScreen(
                             set(Calendar.SECOND, nowCal.get(Calendar.SECOND))
                             set(Calendar.MILLISECOND, nowCal.get(Calendar.MILLISECOND))
                         }
-                        onAddExpenseForDate(targetCal.time)
+                        if (isIncome) {
+                            onAddIncomeForDate(targetCal.time)
+                        } else {
+                            onAddExpenseForDate(targetCal.time)
+                        }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = TerracottaPrimary),
+                    colors = ButtonDefaults.buttonColors(containerColor = activeAccent),
                     shape = CircleShape,
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -351,7 +366,7 @@ fun HistoryScreen(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(13.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Catat", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (isIncome) "Catat Masuk" else "Catat", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -362,7 +377,7 @@ fun HistoryScreen(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("Cari catatan pengeluaran...", fontSize = 13.sp, color = StoneMuted) },
+            placeholder = { Text(if (isIncome) "Cari catatan pemasukan..." else "Cari catatan pengeluaran...", fontSize = 13.sp, color = StoneMuted) },
             leadingIcon = {
                 Icon(Icons.Default.Search, contentDescription = "Cari", tint = StoneMuted, modifier = Modifier.size(18.dp))
             },
@@ -371,7 +386,7 @@ fun HistoryScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = CardSurface,
                 unfocusedContainerColor = CardSurface,
-                focusedBorderColor = TerracottaPrimary,
+                focusedBorderColor = activeAccent,
                 unfocusedBorderColor = BorderBeige
             ),
             modifier = Modifier.fillMaxWidth()
@@ -390,8 +405,8 @@ fun HistoryScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(if (isAll) TerracottaPrimary else CardSurface)
-                        .border(1.dp, if (isAll) TerracottaPrimary else BorderBeige, RoundedCornerShape(20.dp))
+                        .background(if (isAll) activeAccent else CardSurface)
+                        .border(1.dp, if (isAll) activeAccent else BorderBeige, RoundedCornerShape(20.dp))
                         .clickable { selectedCategoryFilter = null }
                         .padding(horizontal = 14.dp, vertical = 7.dp)
                 ) {
@@ -404,13 +419,13 @@ fun HistoryScreen(
                 }
             }
 
-            items(expenseCategories) { cat ->
+            items(relevantCategories) { cat ->
                 val isSelected = selectedCategoryFilter?.id == cat.id
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(if (isSelected) TerracottaPrimary else CardSurface)
-                        .border(1.dp, if (isSelected) TerracottaPrimary else BorderBeige, RoundedCornerShape(20.dp))
+                        .background(if (isSelected) activeAccent else CardSurface)
+                        .border(1.dp, if (isSelected) activeAccent else BorderBeige, RoundedCornerShape(20.dp))
                         .clickable {
                             selectedCategoryFilter = if (isSelected) null else cat
                         }
@@ -444,7 +459,7 @@ fun HistoryScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Tidak ada catatan pengeluaran di periode ini.",
+                    text = if (isIncome) "Tidak ada catatan pemasukan di periode ini." else "Tidak ada catatan pengeluaran di periode ini.",
                     fontSize = 13.sp,
                     color = StoneMuted
                 )

@@ -2061,3 +2061,38 @@ input {
   border-color: var(--sn-income);
   color: #fff;
 }
+
+/* Persistent Income Section Context */
+.app-section-income .bottom-nav .nav-item.active {
+  color: var(--sn-income);
+}
+
+.app-section-income .bottom-nav .nav-item.active svg {
+  stroke: var(--sn-income);
+}
+
+.app-section-income .bottom-nav .nav-item.active::after {
+  background: var(--sn-income);
+}
+
+.app-section-income .quick-add-history-btn {
+  background: var(--sn-income);
+}
+
+.app-section-income .chip-btn.active {
+  background: var(--sn-income);
+  border-color: var(--sn-income);
+}
+
+.app-section-income .bar-fill {
+  background: var(--sn-income) !important;
+}
+
+.app-section-income .bar-col.selected .bar-fill {
+  background: var(--sn-income-dark) !important;
+}
+
+.app-section-income .stats-big-number {
+  color: var(--sn-income);
+}
+

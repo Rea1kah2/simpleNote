@@ -136,7 +136,8 @@ fun InteractiveTrendChart(
     monthlyExpenses: List<ExpenseEntity>,
     monthDate: Date,
     onPeriodSelected: (title: String, matchingExpenses: List<ExpenseEntity>) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    barColor: Color = TerracottaPrimary
 ) {
     var mode by remember { mutableStateOf(TrendMode.WEEKLY) }
     var selectedWeekId by remember { mutableStateOf("W1") }
@@ -326,7 +327,7 @@ fun InteractiveTrendChart(
                         Text(
                             text = if (w.sum > 0) formatCompactRupiah(w.sum) else "Rp 0",
                             fontSize = 10.sp,
-                            color = if (isSelected) TerracottaPrimary else StoneMuted,
+                            color = if (isSelected) barColor else StoneMuted,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -335,15 +336,15 @@ fun InteractiveTrendChart(
                                 .fillMaxWidth()
                                 .height(100.dp)
                                 .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                                .background(if (isSelected) TerracottaPrimary.copy(alpha = 0.12f) else Color.Transparent),
+                                .background(if (isSelected) barColor.copy(alpha = 0.12f) else Color.Transparent),
                             contentAlignment = Alignment.BottomCenter
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(barHeightFraction)
-                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                    .background(if (w.sum > 0) (if (isSelected) TerracottaPrimary else TerracottaPrimary.copy(alpha = 0.75f)) else BorderBeige)
+                                .fillMaxWidth()
+                                .fillMaxHeight(barHeightFraction)
+                                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                .background(if (w.sum > 0) (if (isSelected) barColor else barColor.copy(alpha = 0.75f)) else BorderBeige)
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
@@ -397,7 +398,7 @@ fun InteractiveTrendChart(
                         Text(
                             text = if (d.sum > 0) formatCompactRupiah(d.sum) else "",
                             fontSize = 8.sp,
-                            color = if (isSelected) TerracottaPrimary else StoneMuted,
+                            color = if (isSelected) barColor else StoneMuted,
                             maxLines = 1
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -406,7 +407,7 @@ fun InteractiveTrendChart(
                                 .fillMaxWidth()
                                 .height(100.dp)
                                 .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                .background(if (isSelected) TerracottaPrimary.copy(alpha = 0.12f) else Color.Transparent),
+                                .background(if (isSelected) barColor.copy(alpha = 0.12f) else Color.Transparent),
                             contentAlignment = Alignment.BottomCenter
                         ) {
                             Box(
@@ -414,7 +415,7 @@ fun InteractiveTrendChart(
                                     .fillMaxWidth()
                                     .fillMaxHeight(barHeightFraction)
                                     .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                                    .background(if (d.sum > 0) (if (isSelected) TerracottaPrimary else TerracottaPrimary.copy(alpha = 0.75f)) else BorderBeige)
+                                    .background(if (d.sum > 0) (if (isSelected) barColor else barColor.copy(alpha = 0.75f)) else BorderBeige)
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
@@ -422,7 +423,7 @@ fun InteractiveTrendChart(
                             text = d.day.toString(),
                             fontSize = 11.sp,
                             fontWeight = if (d.isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (d.isToday) TerracottaPrimary else CharcoalInk
+                            color = if (d.isToday) barColor else CharcoalInk
                         )
                         Text(text = d.dayNameShort, fontSize = 9.sp, color = StoneMuted)
                     }

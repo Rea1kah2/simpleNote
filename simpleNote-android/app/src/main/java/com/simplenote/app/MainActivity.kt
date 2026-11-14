@@ -54,6 +54,7 @@ import com.simplenote.app.ui.screens.today.TodayScreen
 import com.simplenote.app.ui.theme.BorderBeige
 import com.simplenote.app.ui.theme.CardSurface
 import com.simplenote.app.ui.theme.CharcoalInk
+import com.simplenote.app.ui.theme.EmeraldLight
 import com.simplenote.app.ui.theme.EmeraldPrimary
 import com.simplenote.app.ui.theme.PaperBackground
 import com.simplenote.app.ui.theme.SimpleNoteTheme
@@ -194,18 +195,19 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                     .background(BorderBeige)
             ) {
                 AppTab.values().forEach { tab ->
-                    val isSelected = currentSection == AppSection.EXPENSE && currentTab == tab
+                    val isSelected = currentTab == tab
+                    val activeColor = if (currentSection == AppSection.INCOME) EmeraldPrimary else TerracottaPrimary
+                    val activeIndicator = if (currentSection == AppSection.INCOME) EmeraldLight else TerracottaLight
                     NavigationBarItem(
                         selected = isSelected,
                         onClick = {
-                            currentSection = AppSection.EXPENSE
                             currentTab = tab
                         },
                         icon = {
                             Icon(
                                 imageVector = tab.icon,
                                 contentDescription = tab.title,
-                                tint = if (isSelected) TerracottaPrimary else StoneMuted
+                                tint = if (isSelected) activeColor else StoneMuted
                             )
                         },
                         label = {
@@ -213,12 +215,12 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                                 text = tab.title,
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) TerracottaPrimary else StoneMuted
+                                color = if (isSelected) activeColor else StoneMuted
                             )
                         },
                         colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = TerracottaLight,
-                            selectedIconColor = TerracottaPrimary,
+                            indicatorColor = activeIndicator,
+                            selectedIconColor = activeColor,
                             unselectedIconColor = StoneMuted
                         )
                     )
@@ -231,38 +233,44 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (currentSection == AppSection.INCOME) {
-                IncomeScreen(
-                    expenses = expenses,
-                    onAddIncomeClick = { viewModel.openAddIncome() },
-                    onIncomeClick = { viewModel.editingExpense.value = it }
-                )
-            } else {
-                when (currentTab) {
-                    AppTab.TODAY -> {
+            when (currentTab) {
+                AppTab.TODAY -> {
+                    if (currentSection == AppSection.INCOME) {
+                        IncomeScreen(
+                            expenses = expenses,
+                            onAddIncomeClick = { viewModel.openAddIncome() },
+                            onIncomeClick = { viewModel.editingExpense.value = it }
+                        )
+                    } else {
                         TodayScreen(
                             expenses = expenses,
                             onAddExpenseClick = { viewModel.openAddExpense() },
                             onExpenseClick = { viewModel.editingExpense.value = it }
                         )
                     }
-                    AppTab.HISTORY -> {
-                        HistoryScreen(
-                            expenses = expenses,
-                            categories = categories,
-                            onExpenseClick = { viewModel.editingExpense.value = it },
-                            onAddExpenseForDate = { date ->
-                                viewModel.openAddExpense(date)
-                            }
-                        )
-                    }
-                    AppTab.STATS -> {
-                        StatsScreen(
-                            expenses = expenses,
-                            onExpenseClick = { viewModel.editingExpense.value = it }
-                        )
-                    }
-                    AppTab.SETTINGS -> {
+                }
+                AppTab.HISTORY -> {
+                    HistoryScreen(
+                        expenses = expenses,
+                        categories = categories,
+                        activeSection = currentSection,
+                        onExpenseClick = { viewModel.editingExpense.value = it },
+                        onAddExpenseForDate = { date ->
+                            viewModel.openAddExpense(date)
+                        },
+                        onAddIncomeForDate = { date ->
+                            viewModel.openAddIncome(date)
+                        }
+                    )
+                }
+                AppTab.STATS -> {
+                    StatsScreen(
+                        expenses = expenses,
+                        activeSection = currentSection,
+                        onExpenseClick = { viewModel.editingExpense.value = it }
+                    )
+                }
+                AppTab.SETTINGS -> {
                         SettingsScreen(
                             totalRecords = expenses.size,
                             cloudUrl = cloudUrl,
@@ -283,7 +291,6 @@ fun SimpleNoteApp(viewModel: MainViewModel) {
                         )
                     }
                 }
-            }
 
             // Bottom Toast Notification floating above NavigationBar
             BottomFloatingToastCard(
